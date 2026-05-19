@@ -112,6 +112,37 @@ export const getMe = async (req, res, next) => {
   }
 };
 
+// @desc    Update current logged-in user
+// @route   PUT /api/users/me
+// @access  Private (owner)
+export const updateMe = async (req, res, next) => {
+  try {
+    if (!req.user) return next(new AppError("Not authenticated", 401));
+
+    const fieldsToUpdate = {
+      name: req.body.name,
+      email: req.body.email,
+      institution: req.body.institution,
+    };
+
+    const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Change password
 // @route   PUT /api/users/:id/password
 // @access  Private (owner or admin)

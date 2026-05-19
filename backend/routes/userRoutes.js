@@ -3,6 +3,7 @@ import {
   getUsers,
   getUser,
   updateUser,
+  updateMe,
   deleteUser,
   getMe,
   changePassword,
@@ -15,6 +16,9 @@ router.use(protect); // All routes protected
 
 // current user profile
 router.get("/me", getMe);
+
+// update current user
+router.put("/me", updateMe);
 
 // Change password
 router.put("/:id/password", changePassword);
