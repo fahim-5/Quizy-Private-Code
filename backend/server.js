@@ -114,9 +114,8 @@ const connectDB = async () => {
       `\n${colors.cyan}🔄 Attempting to connect to MongoDB...${colors.reset}`,
     );
 
-    const uri =
-      process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/onlinequizplatfrom";
-
+    const uri ="mongodb://127.0.0.1:27017/onlinequizplatfrom";
+      
     // Print masked URI for debugging (hides credentials)
     try {
       console.log(

@@ -13,8 +13,8 @@ Rifa: ( FrontEnd Student)
 Shouvee : (Backend)
 1. backend\controllers\subjectController.js
 2. backend\models\Subject.js
-3. 
-4. 
+3. backend\controllers\authController.js
+4. backend\middleware\validation.js
 5. 
 6. 
 7. 
@@ -25,7 +25,7 @@ Shouvee : (Backend)
 Marufa :(Routes + API)
 1. AppRoutes.jsx
 2. backend\routes\subjectRoutes.js
-3. 
+3. backend\models\User.js
 4. 
 5. 
 6. 

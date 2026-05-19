@@ -146,13 +146,16 @@ const Navbar = () => {
     }
   };
 
-  const navigation = [{ name: "Dashboard", href: "/dashboard" }];
-  if (user && user.role === "teacher") {
-    navigation.push({ name: "Your Courses", href: "/teacher/courses" });
-  }
-  // student-specific link: show only enrolled courses
-  if (user && user.role === "student") {
-    navigation.push({ name: "Your Courses", href: "/courses?enrolled=true" });
+  // show navigation items only for authenticated users
+  const navigation = [];
+  if (user) {
+    navigation.push({ name: "Dashboard", href: "/dashboard" });
+    if (user.role === "teacher") {
+      navigation.push({ name: "Your Courses", href: "/teacher/courses" });
+    }
+    if (user.role === "student") {
+      navigation.push({ name: "Your Courses", href: "/courses?enrolled=true" });
+    }
   }
 
   return (
@@ -161,7 +164,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(user ? "/dashboard" : "/login")}
               className="flex-shrink-0 flex items-center"
               aria-label="Home"
             >
@@ -287,8 +290,39 @@ const Navbar = () => {
                   aria-haspopup="true"
                   aria-expanded={userMenuOpen}
                 >
-                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm text-black">
-                    {(user.name || "U")[0]}
+                  <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center text-white">
+                    {user && user.role === "teacher" ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" />
+                        <path d="M3 20c0-3.866 4.477-7 9-7s9 3.134 9 7" />
+                        <rect x="16" y="14" width="5" height="3" rx="0.5" />
+                      </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 2l9 4.5-9 4.5-9-4.5L12 2z" />
+                        <path d="M12 11.5v6.5" />
+                      </svg>
+                    )}
                   </div>
                   <span className="text-sm text-black">
                     {user.name || "User"}
