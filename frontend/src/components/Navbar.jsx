@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/images/logo.png";
 import useAuth from "../hooks/useAuth";
 import api from "../services/api";
+import Avatar from "./Avatar";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -290,39 +291,8 @@ const Navbar = () => {
                   aria-haspopup="true"
                   aria-expanded={userMenuOpen}
                 >
-                  <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center text-white">
-                    {user && user.role === "teacher" ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" />
-                        <path d="M3 20c0-3.866 4.477-7 9-7s9 3.134 9 7" />
-                        <rect x="16" y="14" width="5" height="3" rx="0.5" />
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 2l9 4.5-9 4.5-9-4.5L12 2z" />
-                        <path d="M12 11.5v6.5" />
-                      </svg>
-                    )}
+                  <div>
+                    <Avatar user={user} size="h-8 w-8" iconSize="h-5 w-5" />
                   </div>
                   <span className="text-sm text-black">
                     {user.name || "User"}

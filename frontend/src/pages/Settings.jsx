@@ -81,6 +81,90 @@ export default function Settings() {
     }
   };
 
+  // Verification/modal state for email/password change
+  const [needsVerify, setNeedsVerify] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState(null);
+
+  const sendVerificationIfNeeded = async () => {
+    // send code to the new email if email changed or password change requested
+    try {
+      await api.post("/auth/forgot-password", { email: form.email.trim().toLowerCase() });
+      setVerifyMessage("Verification code sent to email");
+      setNeedsVerify(true);
+    } catch (err) {
+      throw new Error(err?.response?.data?.message || err.message || "Failed to send verification code");
+    }
+  };
+
+  const applyUpdatesAfterVerify = async () => {
+    // perform password change first (if requested), then profile update
+    try {
+      if (newPassword) {
+        await api.put(`/users/${user._id}/password`, {
+          currentPassword,
+          newPassword,
+        });
+      }
+
+      const res = await api.put(`/users/${user._id}`, form);
+      const updated = res.data.data || res.data;
+      login && login(updated, localStorage.getItem("token"));
+      setSuccess("Profile updated");
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch (err) {
+      throw new Error(err?.response?.data?.message || err.message || "Update failed");
+    }
+  };
+
+  const handleSaveUpdate = async () => {
+    if (!user) return navigate("/login");
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const emailChanged = form.email && form.email.toLowerCase() !== (user.email || "").toLowerCase();
+      const passwordChangeRequested = newPassword && newPassword.length > 0;
+
+      if (emailChanged || passwordChangeRequested) {
+        // send verification code and show modal
+        await sendVerificationIfNeeded();
+        setLoading(false);
+        return;
+      }
+
+      // no verification needed, do immediate save
+      const res = await api.put(`/users/${user._id}`, form);
+      const updated = res.data.data || res.data;
+      login && login(updated, localStorage.getItem("token"));
+      setSuccess("Profile updated");
+    } catch (err) {
+      setError(err?.message || "Save failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    setVerifyLoading(true);
+    setError(null);
+    try {
+      if (!/^\d{6}$/.test(verifyCode)) throw new Error("Enter the 6-digit code");
+      await api.post("/auth/verify-reset", { email: form.email.trim().toLowerCase(), code: verifyCode.trim() });
+      // code valid, apply updates
+      await applyUpdatesAfterVerify();
+      setNeedsVerify(false);
+      setVerifyCode("");
+      setVerifyMessage(null);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || "Verification failed");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -147,24 +231,19 @@ export default function Settings() {
                 />
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={handleChangePassword}
-                  disabled={loading}
-                  className="px-3 py-1 bg-blue-600 text-white rounded"
-                >
-                  Change password
-                </button>
+                {/* password change will be applied when saving updates */}
+                <div className="text-sm text-gray-500">Password will be updated when you click Save Update</div>
               </div>
             </div>
           </div>
 
           <div className="flex gap-2 mt-4">
             <button
-              onClick={handleSave}
+              onClick={handleSaveUpdate}
               disabled={loading}
               className="bg-black text-white px-4 py-2 rounded"
             >
-              Save
+              {loading ? "Saving..." : "Save Update"}
             </button>
             <button
               onClick={() => navigate(-1)}
@@ -173,6 +252,39 @@ export default function Settings() {
               Cancel
             </button>
           </div>
+
+          {needsVerify && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg max-w-sm w-full">
+                <h3 className="text-lg font-semibold mb-2">Verify change</h3>
+                <p className="text-sm mb-3">{verifyMessage || "Enter the 6-digit code sent to your email"}</p>
+                <input
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/[^0-9]/g, "").slice(0,6))}
+                  placeholder="6-digit code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="w-full border px-2 py-1 rounded mb-3"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => { setNeedsVerify(false); setVerifyCode(""); setVerifyMessage(null); }}
+                    className="px-3 py-1 border rounded"
+                    disabled={verifyLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleVerifyCode}
+                    className="px-3 py-1 bg-black text-white rounded"
+                    disabled={verifyLoading}
+                  >
+                    {verifyLoading ? "Verifying..." : "Verify"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
