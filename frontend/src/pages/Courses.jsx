@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function Courses() {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [subjects, setSubjects] = useState([]);
@@ -62,6 +63,14 @@ export default function Courses() {
       (s.code || "").toLowerCase().includes(q)
     );
   });
+
+  // if ?enrolled=true is present and user is a student, show only enrolled courses
+  const params = new URLSearchParams(location.search);
+  const showEnrolledOnly = params.get("enrolled") === "true";
+  const visible =
+    showEnrolledOnly && user && user.role === "student"
+      ? filtered.filter((s) => s.isEnrolled)
+      : filtered;
 
   return (
     <div className="bg-white min-h-screen p-6">
@@ -122,7 +131,7 @@ export default function Courses() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filtered.map((s) => (
+            {visible.map((s) => (
               <tr key={s._id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   {s.code}
@@ -165,7 +174,11 @@ export default function Courses() {
                         });
                       }
                     }}
-                    className="text-sm px-2 py-1 border rounded-md"
+                    className={`${
+                      s.isEnrolled
+                        ? "text-sm px-2 py-1 bg-green-600 text-white rounded-md"
+                        : "text-sm px-2 py-1 border rounded-md"
+                    }`}
                   >
                     View Course
                   </button>

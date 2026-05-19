@@ -146,18 +146,27 @@ const Navbar = () => {
     }
   };
 
-  const navigation = [{ name: "Quizzes", href: "/dashboard" }];
-  if (user && user.role === "teacher")
+  const navigation = [{ name: "Dashboard", href: "/dashboard" }];
+  if (user && user.role === "teacher") {
     navigation.push({ name: "Your Courses", href: "/teacher/courses" });
+  }
+  // student-specific link: show only enrolled courses
+  if (user && user.role === "student") {
+    navigation.push({ name: "Your Courses", href: "/courses?enrolled=true" });
+  }
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex-shrink-0 flex items-center">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex-shrink-0 flex items-center"
+              aria-label="Home"
+            >
               <img src={logo} alt="Qizy logo" className="h-12 mr-2 w-auto" />
-            </Link>
+            </button>
             <div className="hidden lg:block">
               <div className="relative">
                 <input
