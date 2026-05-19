@@ -51,9 +51,22 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
 };
-app.use(cors(corsOptions));
-// Enable preflight for all routes with same options
-app.options("*", cors(corsOptions));
+
+// In development, be permissive so browsers like Firefox can hit the API during local testing.
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    cors({
+      origin: true,
+      credentials: true,
+      optionsSuccessStatus: 200,
+    }),
+  );
+  app.options("*", cors({ origin: true, credentials: true }));
+} else {
+  app.use(cors(corsOptions));
+  // Enable preflight for all routes with same options
+  app.options("*", cors(corsOptions));
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -114,8 +127,8 @@ const connectDB = async () => {
       `\n${colors.cyan}🔄 Attempting to connect to MongoDB...${colors.reset}`,
     );
 
-    const uri ="mongodb://127.0.0.1:27017/onlinequizplatfrom";
-      
+    const uri = "mongodb://127.0.0.1:27017/onlinequizplatfrom";
+
     // Print masked URI for debugging (hides credentials)
     try {
       console.log(
