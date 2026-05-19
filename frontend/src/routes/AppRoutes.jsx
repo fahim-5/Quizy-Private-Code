@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import About from "../pages/About";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import Forgot from "../pages/Forgot";
 import Dashboard from "../pages/Dashboard";
 import TakeQuiz from "../pages/TakeQuiz";
 import Join from "../pages/Join";
@@ -25,6 +26,7 @@ export default function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot" element={<Forgot />} />
       <Route path="/register" element={<Register />} />
       <Route path="/join" element={<Join />} />
       <Route path="/lobby" element={<StudentLobby />} />

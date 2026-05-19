@@ -37,7 +37,10 @@ export default function Login() {
 
       navigate("/dashboard");
     } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Login failed");
+      const status = err?.response?.status;
+      if (status === 401) setError("Wrong password");
+      else
+        setError(err?.response?.data?.message || err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -66,7 +69,7 @@ export default function Login() {
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
             />
             <div className="absolute right-0 top-0 mt-2 mr-2 text-sm">
-              <Link to="/forgot" className="text-black underline">
+              <Link to="/forgot" className="text-red-600 underline">
                 Forgot?
               </Link>
             </div>

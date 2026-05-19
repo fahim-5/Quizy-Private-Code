@@ -183,6 +183,117 @@ export const resendVerification = async (req, res, next) => {
   }
 };
 
+// @desc    Request password reset (send code)
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const requestPasswordReset = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return next(new AppError("Email is required", 400));
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return next(new AppError("User not found", 404));
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const expires = Date.now() + 1000 * 60 * 15; // 15 minutes
+
+    user.passwordResetCode = codeHash;
+    user.passwordResetExpires = new Date(expires);
+    await user.save();
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Password reset code",
+        text: `Your password reset code is: ${code}`,
+        html: verificationEmail({
+          name: user.name || user.identifier,
+          code,
+          expiresMinutes: 15,
+        }),
+      });
+    } catch (e) {
+      console.warn("Failed to send password reset email", e);
+    }
+
+    res.status(200).json({ success: true, message: "Reset code sent" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Verify password reset code
+// @route   POST /api/auth/verify-reset
+// @access  Public
+export const verifyPasswordReset = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code)
+      return next(new AppError("Email and code are required", 400));
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+passwordResetCode +passwordResetExpires",
+    );
+    if (!user) return next(new AppError("User not found", 404));
+    if (!user.passwordResetCode || !user.passwordResetExpires)
+      return next(new AppError("No reset requested for this account", 400));
+    if (user.passwordResetExpires.getTime() < Date.now())
+      return next(new AppError("Reset code expired", 400));
+
+    const codeHash = crypto
+      .createHash("sha256")
+      .update(code.toString())
+      .digest("hex");
+    if (codeHash !== user.passwordResetCode)
+      return next(new AppError("Invalid reset code", 400));
+
+    res.status(200).json({ success: true, message: "Code valid" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email, code, password } = req.body;
+    if (!email || !code || !password)
+      return next(
+        new AppError("Email, code and new password are required", 400),
+      );
+    if ((password || "").length < 6)
+      return next(
+        new AppError("Password must be at least 6 characters long", 400),
+      );
+
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+passwordResetCode +passwordResetExpires +password",
+    );
+    if (!user) return next(new AppError("User not found", 404));
+    if (!user.passwordResetCode || !user.passwordResetExpires)
+      return next(new AppError("No reset requested for this account", 400));
+    if (user.passwordResetExpires.getTime() < Date.now())
+      return next(new AppError("Reset code expired", 400));
+
+    const codeHash = crypto
+      .createHash("sha256")
+      .update(code.toString())
+      .digest("hex");
+    if (codeHash !== user.passwordResetCode)
+      return next(new AppError("Invalid reset code", 400));
+
+    user.password = password;
+    user.passwordResetCode = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Password updated" });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -206,11 +317,6 @@ export const login = async (req, res, next) => {
 
     if (!user || !(await user.comparePassword(password))) {
       return next(new AppError("Invalid credentials", 401));
-    }
-    if (!user.isVerified) {
-      return next(
-        new AppError("Please verify your email before logging in", 401),
-      );
     }
 
     sendTokenResponse(user, 200, res);

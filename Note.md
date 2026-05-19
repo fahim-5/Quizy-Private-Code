@@ -3,7 +3,7 @@ Rifa: ( FrontEnd Student)
 2. Dasboard.jsx
 3. Courses.jsx
 4. frontend\src\components\Navbar.jsx
-5. 
+5. frontend\src\pages\Forgot.jsx
 6. 
 7. 
 8. 
