@@ -10,6 +10,8 @@ export default function CourseDetail() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollKeyInput, setEnrollKeyInput] = useState("");
   const { user } = useAuth() || {};
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -22,18 +24,22 @@ export default function CourseDetail() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const quizUrl = `/quizzes?subject=${id}&all=true${showOnlyMine ? "&mine=true" : ""}`;
-        const [sRes, qRes] = await Promise.allSettled([
-          api.get(`/subjects/${id}`),
-          api.get(quizUrl),
-        ]);
+        // first fetch subject (returns isEnrolled when logged in)
+        const sRes = await api.get(`/subjects/${id}`);
         if (!mounted) return;
-        const subj =
-          sRes.status === "fulfilled" ? sRes.value.data.subject : null;
-        const qz =
-          qRes.status === "fulfilled" ? qRes.value.data.quizzes || [] : [];
+        const subj = sRes?.data?.subject;
+        const enrolled = !!sRes?.data?.isEnrolled;
         setSubject(subj);
-        setQuizzes(qz);
+        setIsEnrolled(enrolled || (user && user.role === "teacher"));
+
+        // If enrolled (or teacher), load quizzes
+        if (enrolled || (user && user.role === "teacher")) {
+          const quizUrl = `/quizzes?subject=${id}&all=true${showOnlyMine ? "&mine=true" : ""}`;
+          const qRes = await api.get(quizUrl);
+          setQuizzes(qRes.data.quizzes || qRes.data || []);
+        } else {
+          setQuizzes([]);
+        }
       } catch (err) {
         setError("Failed to load course data");
       } finally {
@@ -86,76 +92,133 @@ export default function CourseDetail() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold mb-3">Quizzes</h2>
-        {quizzes.length === 0 ? (
-          <div className="text-sm text-gray-600">
-            No quizzes for this course yet.
+        {!isEnrolled && user && user.role !== "teacher" ? (
+          <div className="p-6 bg-yellow-50 border rounded">
+            <h3 className="font-semibold mb-2">Enrollment required</h3>
+            <p className="text-sm text-gray-700 mb-3">
+              You must enroll in this course before viewing its quizzes.
+            </p>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700">Enroll Key</label>
+              <input
+                value={enrollKeyInput}
+                onChange={(e) => setEnrollKeyInput(e.target.value)}
+                className="w-full border px-2 py-1 rounded-md"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await api.post(`/subjects/${subject._id}/enroll`, {
+                      enrollKey: enrollKeyInput,
+                    });
+                    // reload quizzes
+                    const qRes = await api.get(
+                      `/quizzes?subject=${id}&all=true${showOnlyMine ? "&mine=true" : ""}`,
+                    );
+                    setQuizzes(qRes.data.quizzes || qRes.data || []);
+                    setIsEnrolled(true);
+                  } catch (err) {
+                    setError(
+                      err?.response?.data?.message ||
+                        err.message ||
+                        "Enroll failed",
+                    );
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="px-3 py-1 bg-black text-white rounded-md"
+                disabled={loading}
+              >
+                {loading ? "Enrolling..." : "Enroll"}
+              </button>
+              <button
+                onClick={() => navigate(-1)}
+                className="px-3 py-1 border rounded-md"
+              >
+                Back
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white border rounded-md">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Code
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Owner
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {quizzes.map((q) => (
-                  <tr key={q._id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                      {q.title}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {q.joinCode || "—"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {q.createdBy?.name || q.createdBy?.identifier || "—"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                      <div className="flex items-center gap-2">
-                        {user && user.role === "teacher" ? (
-                          <>
-                            <button
-                              onClick={() => navigate(`/teacher/quiz/${q._id}`)}
-                              className="px-3 py-1 border rounded-md text-sm"
-                            >
-                              Manage
-                            </button>
-                            <button
-                              onClick={() =>
-                                navigate(`/teacher/monitor/${q._id}`)
-                              }
-                              className="px-3 py-1 bg-green-600 text-white rounded-md text-sm"
-                            >
-                              Monitor
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => navigate(`/take/${q._id}`)}
-                            className="px-3 py-1 bg-black text-white rounded-md text-sm"
-                          >
-                            Take Quiz
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <h2 className="text-lg font-semibold mb-3">Quizzes</h2>
+            {quizzes.length === 0 ? (
+              <div className="text-sm text-gray-600">
+                No quizzes for this course yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto bg-white border rounded-md">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Title
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Code
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Owner
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {quizzes.map((q) => (
+                      <tr key={q._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                          {q.title}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {q.joinCode || "—"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {q.createdBy?.name || q.createdBy?.identifier || "—"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                          <div className="flex items-center gap-2">
+                            {user && user.role === "teacher" ? (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    navigate(`/teacher/quiz/${q._id}`)
+                                  }
+                                  className="px-3 py-1 border rounded-md text-sm"
+                                >
+                                  Manage
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    navigate(`/teacher/monitor/${q._id}`)
+                                  }
+                                  className="px-3 py-1 bg-green-600 text-white rounded-md text-sm"
+                                >
+                                  Monitor
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => navigate(`/take/${q._id}`)}
+                                className="px-3 py-1 bg-black text-white rounded-md text-sm"
+                              >
+                                Take Quiz
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

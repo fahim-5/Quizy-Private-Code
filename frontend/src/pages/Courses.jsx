@@ -14,6 +14,13 @@ export default function Courses() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", enrollKey: "" });
   const [query, setQuery] = useState("");
+  const [enrollModal, setEnrollModal] = useState({
+    show: false,
+    subject: null,
+    enrollKey: "",
+    error: null,
+    loading: false,
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -128,13 +135,36 @@ export default function Courses() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   <button
-                    onClick={() =>
-                      navigate(
-                        user && user.role === "teacher"
-                          ? `/teacher/courses/${s._id}`
-                          : `/courses/${s._id}`,
-                      )
-                    }
+                    onClick={async () => {
+                      // fetch subject to check enrollment
+                      try {
+                        const res = await api.get(`/subjects/${s._id}`);
+                        const isEnrolled = res.data && res.data.isEnrolled;
+                        if (isEnrolled) {
+                          navigate(
+                            user && user.role === "teacher"
+                              ? `/teacher/courses/${s._id}`
+                              : `/courses/${s._id}`,
+                          );
+                        } else {
+                          setEnrollModal({
+                            show: true,
+                            subject: res.data.subject || s,
+                            enrollKey: "",
+                            error: null,
+                            loading: false,
+                          });
+                        }
+                      } catch (err) {
+                        setEnrollModal({
+                          show: true,
+                          subject: s,
+                          enrollKey: "",
+                          error: null,
+                          loading: false,
+                        });
+                      }
+                    }}
                     className="text-sm px-2 py-1 border rounded-md"
                   >
                     View Course
@@ -241,6 +271,87 @@ export default function Courses() {
                 disabled={creating}
               >
                 {creating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {enrollModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
+          <div className="bg-white p-6 rounded-md w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Enroll in {enrollModal.subject?.name}
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Enter the enroll key provided by the instructor to join this
+              course.
+            </p>
+            {enrollModal.error && (
+              <div className="text-red-600 mb-2">{enrollModal.error}</div>
+            )}
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700">Enroll Key</label>
+              <input
+                className="w-full border px-2 py-1 rounded-md"
+                value={enrollModal.enrollKey}
+                onChange={(e) =>
+                  setEnrollModal((m) => ({ ...m, enrollKey: e.target.value }))
+                }
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() =>
+                  setEnrollModal({
+                    show: false,
+                    subject: null,
+                    enrollKey: "",
+                    error: null,
+                    loading: false,
+                  })
+                }
+                className="px-3 py-1 border rounded-md"
+                disabled={enrollModal.loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setEnrollModal((m) => ({ ...m, loading: true, error: null }));
+                  try {
+                    await api.post(
+                      `/subjects/${enrollModal.subject._id}/enroll`,
+                      { enrollKey: enrollModal.enrollKey },
+                    );
+                    // go to course after successful enroll
+                    navigate(
+                      user && user.role === "teacher"
+                        ? `/teacher/courses/${enrollModal.subject._id}`
+                        : `/courses/${enrollModal.subject._id}`,
+                    );
+                    setEnrollModal({
+                      show: false,
+                      subject: null,
+                      enrollKey: "",
+                      error: null,
+                      loading: false,
+                    });
+                  } catch (err) {
+                    setEnrollModal((m) => ({
+                      ...m,
+                      loading: false,
+                      error:
+                        err?.response?.data?.message ||
+                        err.message ||
+                        "Enroll failed",
+                    }));
+                  }
+                }}
+                className="px-3 py-1 bg-black text-white rounded-md"
+                disabled={enrollModal.loading}
+              >
+                {enrollModal.loading ? "Enrolling..." : "Enroll"}
               </button>
             </div>
           </div>

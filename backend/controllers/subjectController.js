@@ -82,10 +82,25 @@ const getSubjects = async (req, res, next) => {
       query.createdBy = req.user._id;
     }
 
-    const subjects = await Subject.find(query)
+    let subjects = await Subject.find(query)
       .limit(200)
       .sort({ createdAt: -1 })
-      .populate("createdBy", "name identifier");
+      .populate("createdBy", "name identifier")
+      .populate("enrolledUsers", "_id");
+
+    // If a user is present (optional auth), annotate subjects with isEnrolled boolean
+    if (req.user) {
+      subjects = subjects.map((s) => {
+        const obj = s.toObject ? s.toObject() : s;
+        obj.isEnrolled = Array.isArray(obj.enrolledUsers)
+          ? obj.enrolledUsers.some(
+              (u) => String(u._id || u) === String(req.user._id),
+            )
+          : false;
+        return obj;
+      });
+    }
+
     res.json({ success: true, subjects });
   } catch (err) {
     next(err);
@@ -94,16 +109,64 @@ const getSubjects = async (req, res, next) => {
 
 const getSubject = async (req, res, next) => {
   try {
-    const subject = await Subject.findById(req.params.id).populate(
-      "createdBy",
-      "name identifier",
-    );
+    const subject = await Subject.findById(req.params.id)
+      .populate("createdBy", "name identifier")
+      .populate("enrolledUsers", "_id name");
     if (!subject)
       return res.status(404).json({ success: false, message: "Not found" });
-    res.json({ success: true, subject });
+
+    // indicate whether the requesting user is enrolled
+    const isEnrolled = req.user
+      ? subject.enrolledUsers.some(
+          (u) => String(u._id) === String(req.user._id),
+        )
+      : false;
+
+    res.json({ success: true, subject, isEnrolled });
   } catch (err) {
     next(err);
   }
 };
 
-export default { createSubject, getSubjects, getSubject };
+const enrollSubject = async (req, res, next) => {
+  try {
+    if (!req.user)
+      return res
+        .status(401)
+        .json({ success: false, message: "Not authenticated" });
+    const { id } = req.params;
+    const { enrollKey } = req.body;
+    const subject = await Subject.findById(id);
+    if (!subject)
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
+
+    // if already enrolled, return success
+    if (
+      subject.enrolledUsers &&
+      subject.enrolledUsers.find((u) => String(u) === String(req.user._id))
+    ) {
+      return res.json({ success: true, message: "Already enrolled" });
+    }
+
+    if (
+      !enrollKey ||
+      String(enrollKey).trim() !== String(subject.enrollKey).trim()
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid enroll key" });
+    }
+
+    subject.enrolledUsers = subject.enrolledUsers || [];
+    subject.enrolledUsers.push(req.user._id);
+    await subject.save();
+
+    res.json({ success: true, message: "Enrolled successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export default { createSubject, getSubjects, getSubject, enrollSubject };

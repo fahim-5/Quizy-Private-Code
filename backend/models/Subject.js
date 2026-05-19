@@ -6,6 +6,7 @@ const SubjectSchema = new mongoose.Schema(
     code: { type: String, required: true, trim: true, unique: true },
     enrollKey: { type: String, required: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    enrolledUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
