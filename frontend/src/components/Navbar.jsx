@@ -152,10 +152,10 @@ const Navbar = () => {
   if (user) {
     navigation.push({ name: "Dashboard", href: "/dashboard" });
     if (user.role === "teacher") {
-      navigation.push({ name: "Your Courses", href: "/teacher/courses" });
+      navigation.push({ name: "My Courses", href: "/teacher/courses" });
     }
     if (user.role === "student") {
-      navigation.push({ name: "Your Courses", href: "/courses?enrolled=true" });
+      navigation.push({ name: "My Courses", href: "/courses?enrolled=true" });
     }
   }
 

@@ -200,11 +200,11 @@ export default function Profile() {
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-4xl md:text-5xl mb-6 font-extrabold text-gray-800 leading-tight">
+                    <h2 className="text-4xl md:text-5xl mb-2 font-extrabold text-gray-800 leading-tight">
                       {profile.name || profile.identifier}
                     </h2>
 
-                    <div className="flex flex-wrap mt-2 items-center gap-4 mt-2 text-sm text-gray-500">
+                    <div className="flex flex-wrap  items-center gap-4 mt-2 text-sm text-gray-500">
                       <div className="flex items-center gap-2">
                         <FaEnvelope />
                         {profile.email}

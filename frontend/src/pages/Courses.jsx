@@ -195,16 +195,7 @@ export default function Courses() {
           </tbody>
         </table>
       </div>
-      <div className="mb-4 flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={onlyMyQuizzes}
-            onChange={(e) => setOnlyMyQuizzes(e.target.checked)}
-          />
-          Show only my quizzes when opening a course
-        </label>
-      </div>
+      
 
       {showCreate && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40">
