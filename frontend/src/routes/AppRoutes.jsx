@@ -33,6 +33,8 @@ export default function AppRoutes() {
       <Route path="/result" element={<Result />} />
       <Route path="/results" element={<ResultsHistory />} />
       <Route path="/teacher" element={<AdminPanel />} />
+      <Route path="/courses" element={<Courses />} />
+      <Route path="/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/courses" element={<Courses />} />
       <Route path="/teacher/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/create" element={<QuizEditor />} />

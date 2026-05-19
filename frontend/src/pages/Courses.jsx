@@ -13,12 +13,13 @@ export default function Courses() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", enrollKey: "" });
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    if (user.role !== "teacher") return;
-    // For teachers, fetch only their courses so they see their own list
-    fetchSubjects(true);
+    // Teachers should see only their courses by default; students see all
+    if (user.role === "teacher") fetchSubjects(true);
+    else fetchSubjects(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -45,21 +46,31 @@ export default function Courses() {
   };
 
   if (!user) return null;
-  if (user.role !== "teacher") return <div className="p-6">Access denied.</div>;
+
+  const filtered = subjects.filter((s) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      (s.name || "").toLowerCase().includes(q) ||
+      (s.code || "").toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="bg-white min-h-screen p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-black">Courses</h2>
-        <div>
+        <div className="flex items-center gap-3">
+          {user.role === "teacher" && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="mr-2 px-3 py-1 bg-green-600 text-white rounded-md"
+            >
+              Add Course
+            </button>
+          )}
           <button
-            onClick={() => setShowCreate(true)}
-            className="mr-2 px-3 py-1 bg-green-600 text-white rounded-md"
-          >
-            Add Course
-          </button>
-          <button
-            onClick={fetchSubjects}
+            onClick={() => fetchSubjects(user.role === "teacher")}
             className="mr-2 px-3 py-1 border rounded-md text-black"
           >
             Refresh
@@ -71,6 +82,15 @@ export default function Courses() {
             Back
           </button>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <input
+          placeholder="Search courses by name or code..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full md:w-1/2 border px-3 py-2 rounded-md"
+        />
       </div>
 
       {loading && <p className="text-black">Loading courses...</p>}
@@ -95,7 +115,7 @@ export default function Courses() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {subjects.map((s) => (
+            {filtered.map((s) => (
               <tr key={s._id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   {s.code}
@@ -110,7 +130,9 @@ export default function Courses() {
                   <button
                     onClick={() =>
                       navigate(
-                        `/teacher/courses/${s._id}${onlyMyQuizzes ? "?mine=true" : ""}`,
+                        user && user.role === "teacher"
+                          ? `/teacher/courses/${s._id}`
+                          : `/courses/${s._id}`,
                       )
                     }
                     className="text-sm px-2 py-1 border rounded-md"
