@@ -1,0 +1,50 @@
+┌─────────────────────────────────────────────────────────────┐
+│                      HERO SECTION                            │
+│                                                              │
+│           "Run quizzes. Track results. Simple."             │
+│                                                              │
+│      Create assessments in seconds. Students join            │
+│         with a code. Everything in one place.               │
+│                                                              │
+│         ┌──────────────┐    ┌──────────────┐                │
+│         │ 👩‍🏫 TEACHER │    │ 👩‍🎓 STUDENT │                │
+│         └──────────────┘    └──────────────┘                │
+│                                                              │
+│         No account needed for students. Free to start.      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    3-STEP DIVIDER                            │
+│                                                              │
+│         ● ─────────── ● ─────────── ●                       │
+│                                                              │
+│        Create        Share        Play                      │
+│      Build quiz    Send code     Get results                │
+│      in minutes    to class      instantly                  │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   TWO-COLUMN FEATURES                        │
+│                                                              │
+│   ┌─────────────────┐      ┌─────────────────┐             │
+│   │ FOR TEACHERS    │      │ FOR STUDENTS    │             │
+│   │                 │      │                 │             │
+│   │ • Create quizzes│      │ • Join with code│             │
+│   │ • Add questions │      │ • Timed quizzes │             │
+│   │ • Live monitor  │      │ • See score     │             │
+│   │ • CSV reports   │      │ • Review answers│             │
+│   │ • Auto-grading  │      │ • Works on phone│             │
+│   └─────────────────┘      └─────────────────┘             │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                        CTA SECTION                           │
+│                                                              │
+│              "Ready to start your first quiz?"               │
+│                                                              │
+│         ┌──────────────┐    ┌──────────────┐                │
+│         │ TEACHER LOGIN│    │ STUDENT JOIN │                │
+│         └──────────────┘    └──────────────┘                │
+│                                                              │
+│              Enter quiz code →  [ _ _ _ _ _ _ ]             │
+└─────────────────────────────────────────────────────────────┘

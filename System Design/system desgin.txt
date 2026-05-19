@@ -1,0 +1,127 @@
+System Design — Student Side Plan
+
+1) Summary / Constraints
+- Backend: MongoDB collections `users`, `quizzes`, `questions`, `results`.
+- Do NOT expose `correctIndex` to clients; server scores submissions.
+- `quizzes.timeLimit` is in seconds; client timer must be validated server-side.
+
+2) Post-login Student Journey (step-by-step)
+- Dashboard: shows active/assigned quizzes, progress summary (avg score, attempts), upcoming timed quizzes, and CTAs (Start / Review).
+- Quiz Preview: displays `title`, `description`, `timeLimit`, `rules`, `attemptsAllowed`, and `settings.showAnswersImmediately`. Option: Start Quiz.
+- Start Quiz: fetch questions (server omits `correctIndex`), start countdown using `timeLimit` (component: Timer).
+- During Quiz: one-by-one or paginated questions, mark-for-review, client-side autosave (localStorage), question navigation, remaining time visible.
+- Submit / Auto-submit: POST answers to `/api/results`; server computes `score` and `total`, stores `results` doc, returns scored result according to `quiz.settings`.
+- Result View: final score, percent, per-question breakdown (student answer, correct answer only if allowed), explanations per policy, time taken, next actions (Review, Dashboard).
+- History & Analytics: results list, trend graph, per-quiz analytics, percentile vs class (if available).
+- Profile & Support: edit profile, change password, help/FAQ.
+
+3) Benefits for Students
+- Immediate scoring for objective questions and quick feedback (where allowed).
+- Timed practice to simulate exam conditions and improve time management.
+- Progress tracking and historical view to monitor improvement.
+- Review of past attempts and explanations to support learning.
+- Motivation features (leaderboards, badges, certificates) optional for engagement.
+
+4) Navigation (recommended links and purpose)
+- Dashboard: overview and quick-start. Primary landing after login.
+- Quizzes: browse active/available quizzes, preview and start.
+- Take Quiz: contextual full-screen route while taking (Timer + question UI).
+- Results / Latest Result: link to most recent attempt summary.
+- Results History: list of past attempts, sorting, export.
+- Profile: account settings and identifiers.
+- Help / About: rules and contact support.
+- Logout: clear auth and return to `Login`.
+
+UI grouping suggestion: Primary nav `Dashboard | Quizzes | History`; Secondary `Profile | Help | Logout`. Show context CTAs in Dashboard and Quizzes list.
+
+5) Security & UX notes
+- Never return `correctIndex` in question payloads; server must score and return results per quiz policy.
+- Enforce timeLimit server-side; validate submission timestamps and duration.
+- Show correct answers/explanations only if `quiz.settings.showAnswersImmediately` or after grading window.
+- Autosave progress regularly; recover on reload to prevent data loss.
+- Prevent concurrent attempts if `attemptsAllowed` is set.
+
+6) Next steps (implementation suggestions)
+- Map nav items to existing frontend pages: Dashboard, TakeQuiz, Result, ResultsHistory, Profile.
+- Wire route guards using JWT (already in project). Ensure `AuthContext` and `useAuth` protect routes.
+- Add autosave and reload recovery in `TakeQuiz` component; ensure server rechecks time and attempts.
+- Optionally implement leaderboard and badges as incremental features.
+
+End of plan.
+
+---
+
+Teacher Side Plan — Admin / Teacher Features
+
+1) Goals & Constraints
+- Teachers create, edit, publish/unpublish quizzes and manage question banks.
+- Support manual grading for subjective answers and automated scoring for objective types.
+- Provide analytics for participation, question difficulty, and class performance.
+- Keep `correctIndex` server-side; only teachers and authorized endpoints may access answers for grading.
+
+2) Teacher Post-login Journey (step-by-step)
+- Admin Panel / Quiz Manager: list of quizzes with status (Draft / Scheduled / Active / Closed), attempts count, avg score, and quick actions (Edit / Preview / Results / Analytics / Delete).
+- Create / Edit Quiz: form fields for `title`, `description`, `timeLimit`, `rules`, `settings` (shuffleQuestions, attemptsAllowed, showAnswersImmediately), tags, scheduled start/end, allowed roles/classes.
+- Question Bank: add/edit/delete questions; support MCQ, multi-select, boolean, short answer (manual grade), long answer (manual grade). Provide bulk import (CSV/JSON) and export options.
+- Preview & Test Run: teacher can preview quiz as student; test-run mode that simulates timer and scoring without creating a `results` record (or create a flagged test result).
+- Publish / Schedule: publish immediately or schedule start/end times; toggle `isActive` to hide/unhide quizzes.
+- Monitor Live Attempts: (optional WebSocket) show currently active takers, progress, and time remaining for each student for monitored exams.
+- Grade & Feedback: list attempts requiring manual grading; provide per-question grader UI (score override, feedback comment), bulk grade actions, and finalization.
+- Results & Analytics: per-quiz analytics (attempts, avg score, pass rate), question-level stats (percent correct, common wrong options), leaderboard, and ability to export CSV of results.
+- Student Management: assign quizzes to specific classes/groups, and view class-level aggregates. Ability to deactivate or flag suspicious attempts.
+- Audit & Logs: record teacher actions (create/edit/delete) for compliance and debugging.
+
+3) Benefits for Teachers
+- Efficient quiz and question management with bulk operations.
+- Accurate automated scoring for objective questions and clear manual grading workflow for subjective ones.
+- Actionable analytics to identify weak questions and student gaps.
+- Scheduling and monitoring tools for proctored or timed assessments.
+
+4) Navigation & UI Components (teacher-facing)
+- AdminPanel: `AdminPanel.jsx` or `AdminAnalytics.jsx` — high-level metrics and quick links.
+- QuizzesManager: create/edit/list quizzes with status filters and batch actions.
+- QuestionEditor: rich question editor with option reordering, image/media attachments, and explanations.
+- AttemptReviewer: grading queue for manual scoring and feedback.
+- AnalyticsDashboard: charts showing attempts over time, avg scores, pass rates, and per-question breakdown.
+- Import/Export Modal: CSV/JSON import for question banks and result exports.
+
+5) API & Backend considerations (teacher flows)
+- Endpoints (examples):
+	- `GET /api/quizzes?creator=<id>` — teacher's quizzes
+	- `POST /api/quizzes` — create quiz (teacher only)
+	- `PUT /api/quizzes/:id` — update settings, schedule, publish
+	- `GET /api/quizzes/:id/questions` — teacher version with `correctIndex`
+	- `POST /api/questions/import` — bulk import
+	- `GET /api/results?quiz=:id` — fetch attempts
+	- `PUT /api/results/:id/grade` — manual grade override
+
+- Security: role-based checks in middleware (`role === 'teacher' || isAdmin`), input validation, rate-limiting for bulk endpoints, and CORS configured per frontend origin.
+- Scoring: server computes objective scores; store `answers` and `computedScore` in `results`. Support grade revisions with audit trail.
+
+6) Analytics & Data Design
+- Cache quiz-level stats (`quizzes.stats`) to avoid heavy aggregations on read; update atomically on result creation (increment attempts, update avgScore) or via background aggregation jobs.
+- Maintain question-level aggregates to identify poor-performing questions; store `questionStats` collection or embedded `quizzes.stats.questions`.
+- Exportable CSV schemas: results list, question stats, class performance.
+
+7) UX & Edge Cases
+- Confirm destructive actions (delete quiz/question) and provide soft-delete to allow recovery.
+- For scheduled quizzes, enforce server-side start/end checks; deny submissions outside window unless in special override mode.
+- Handle network interruptions during quiz: autosave answers, allow reconnection within the allowed time, but enforce end time based on server clock.
+- Prevent impersonation: teachers cannot take student-only routes; admin actions require re-auth or MFA for sensitive operations (optional).
+
+8) Implementation Roadmap (incremental)
+- Phase 1: Quiz CRUD, Question Bank CRUD, Teacher preview, basic Results viewer.
+- Phase 2: Manual grading UI, bulk import/export, scheduling, attempt limits.
+- Phase 3: Analytics dashboard, live monitoring (WebSocket), leaderboards, badges/certificates.
+
+9) Mapping to repository files
+- Frontend pages to use/extend: `frontend/src/pages/AdminPanel.jsx`, `QuizCard.jsx`, `QuizzesTable.jsx`, `UsersTable.jsx`, `ManageQuestions.jsx`, `ResultsHistory.jsx`, `AdminAnalytics.jsx`.
+- Backend controllers to check/extend: `backend/controllers/quizController.js`, `questionController.js`, `resultController.js`, and `userController.js` for role checks.
+
+10) Final polish & ops notes
+- Use environment variables for scheduling timezone considerations and ensure server uses UTC for authoritative timestamps.
+- Add unit tests for scoring logic and integration tests for quiz lifecycle (create → publish → take → score → analytics).
+- Document teacher features in `README.md` / teacher guide and add inline help in the admin UI.
+
+End of teacher plan — appended to student plan to make a full system design.
+

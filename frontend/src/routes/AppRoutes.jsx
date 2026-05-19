@@ -1,0 +1,46 @@
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import About from "../pages/About";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+import Dashboard from "../pages/Dashboard";
+import TakeQuiz from "../pages/TakeQuiz";
+import Join from "../pages/Join";
+import Result from "../pages/Result";
+import AdminPanel from "../pages/AdminPanel";
+import Courses from "../pages/Courses";
+import CourseDetail from "../pages/CourseDetail";
+import ManageQuestions from "../pages/ManageQuestions";
+import QuizEditor from "../pages/QuizEditor";
+import LiveMonitor from "../pages/LiveMonitor";
+import ResultsHistory from "../pages/ResultsHistory";
+import Reports from "../pages/Reports";
+import StudentLobby from "../pages/StudentLobby";
+import Profile from "../pages/Profile";
+import Settings from "../pages/Settings";
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/join" element={<Join />} />
+      <Route path="/lobby" element={<StudentLobby />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/quiz/:id" element={<TakeQuiz />} />
+      <Route path="/result" element={<Result />} />
+      <Route path="/results" element={<ResultsHistory />} />
+      <Route path="/teacher" element={<AdminPanel />} />
+      <Route path="/teacher/courses" element={<Courses />} />
+      <Route path="/teacher/courses/:id" element={<CourseDetail />} />
+      <Route path="/teacher/create" element={<QuizEditor />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/teacher/monitor/:id" element={<LiveMonitor />} />
+      <Route path="/teacher/quiz/:id" element={<ManageQuestions />} />
+      <Route path="/teacher/reports/:quizId" element={<Reports />} />
+    </Routes>
+  );
+}
