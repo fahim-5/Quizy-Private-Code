@@ -22,7 +22,7 @@ import Settings from "../pages/Settings";
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -33,6 +33,8 @@ export default function AppRoutes() {
       <Route path="/result" element={<Result />} />
       <Route path="/results" element={<ResultsHistory />} />
       <Route path="/teacher" element={<AdminPanel />} />
+      <Route path="/courses" element={<Courses />} />
+      <Route path="/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/courses" element={<Courses />} />
       <Route path="/teacher/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/create" element={<QuizEditor />} />

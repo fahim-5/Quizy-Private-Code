@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema(
       // Use `identifier` as the login ID (student/teacher id)
       type: String,
       required: [true, "Please provide an identifier"],
-      unique: true,
       trim: true,
     },
     email: {
@@ -26,7 +25,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Please provide a password"],
-      minlength: [4, "Password must be at least 4 characters"],
+      minlength: [6, "Password must be at least 6 characters"],
       select: false,
     },
     role: {
@@ -67,6 +66,12 @@ userSchema.methods.toJSON = function () {
   delete user.password;
   return user;
 };
+
+// Compound index to ensure identifier uniqueness within the same institution
+userSchema.index(
+  { identifier: 1, institution: 1 },
+  { unique: true, sparse: true },
+);
 
 const User = mongoose.model("User", userSchema);
 

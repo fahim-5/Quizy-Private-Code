@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api";
 import QuizCard from "../components/QuizCard";
@@ -8,25 +8,40 @@ import TeacherAnalytics from "../components/AdminAnalytics";
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
   const [quizzes, setQuizzes] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const quizUrl =
-        user && user.role === "teacher" ? "/quizzes?all=true&mine=true" : "/quizzes";
-      const [qRes, rRes] = await Promise.all([api.get(quizUrl), api.get("/results")]);
+        user && user.role === "teacher"
+          ? "/quizzes?all=true&mine=true"
+          : "/quizzes";
+      const calls = [api.get(quizUrl), api.get("/results")];
+      // also fetch subjects for students view
+      calls.push(api.get("/subjects"));
+      const [qRes, rRes, sRes] = await Promise.all(calls);
 
       setQuizzes(qRes.data.quizzes || qRes.data || []);
       setResults(rRes.data || []);
+      setSubjects((sRes && (sRes.data.subjects || sRes.data)) || []);
     } catch (err) {
       try {
         const qOnly = await api.get(
-          user && user.role === "teacher" ? "/quizzes?all=true&mine=true" : "/quizzes",
+          user && user.role === "teacher"
+            ? "/quizzes?all=true&mine=true"
+            : "/quizzes",
         );
         setQuizzes(qOnly.data.quizzes || qOnly.data || []);
+        // attempt to load subjects as fallback
+        try {
+          const sOnly = await api.get("/subjects");
+          setSubjects(sOnly.data.subjects || sOnly.data || []);
+        } catch (e) {}
       } catch (e) {
         // ignore
       }
@@ -50,6 +65,14 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Re-fetch when the route changes back to the dashboard (fixes missing courses after navigation)
+  useEffect(() => {
+    if (location?.pathname === "/dashboard") {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.pathname]);
+
   // realtime clock for dashboard
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -67,11 +90,9 @@ export default function Dashboard() {
         <header className="mb-8 bg-white rounded-xl shadow-md p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-extrabold">
-              Welcome back, {user?.name || user?.username || "Student"}! 👋
+              Welcome back, {user?.name || user?.username || "Student"}! 💚
             </h1>
-            <p className="text-gray-600 mt-1">
-              Ready to test your knowledge? Choose a quiz below to get started.
-            </p>
+            <p className="text-gray-600 mt-1"></p>
           </div>
 
           <div className="flex items-center gap-6">
@@ -128,8 +149,14 @@ export default function Dashboard() {
                   )}
 
                   {quizzes
-                    .filter((q) => String(q.createdBy?._id || q.createdBy || "") === String(user._id))
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .filter(
+                      (q) =>
+                        String(q.createdBy?._id || q.createdBy || "") ===
+                        String(user._id),
+                    )
+                    .sort(
+                      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+                    )
                     .slice(0, 3)
                     .map((q) => (
                       <div key={q._id} className="">
@@ -147,23 +174,45 @@ export default function Dashboard() {
         ) : (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Available Quizzes</h2>
+              <h2 className="text-xl font-semibold">Available Courses</h2>
               <div>
-                <button onClick={() => navigate('/quizzes')} className="text-sm text-gray-600">View all</button>
+                <button
+                  onClick={() => navigate("/courses")}
+                  className="text-sm text-gray-600"
+                >
+                  View all
+                </button>
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {quizzes.length === 0 && (
-                <div className="col-span-full p-6 bg-white rounded shadow">No quizzes available yet.</div>
+              {subjects.length === 0 && (
+                <div className="col-span-full p-6 bg-white rounded shadow">
+                  No courses available yet.
+                </div>
               )}
 
-              {quizzes
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .slice(0, 3)
-                .map((q) => (
-                  <div key={q._id} className="">
-                    <QuizCard quiz={q} onStart={() => handleStart(q)} />
+              {subjects
+                .sort(
+                  (a, b) =>
+                    new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+                )
+                .slice(0, 6)
+                .map((s) => (
+                  <div key={s._id} className="bg-white rounded shadow p-4">
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {s.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Code: {s.code || "-"}
+                    </p>
+                    <div className="mt-4">
+                      <button
+                        onClick={() => navigate(`/teacher/courses/${s._id}`)}
+                        className="px-3 py-1 bg-black text-white rounded-md"
+                      >
+                        View Course
+                      </button>
+                    </div>
                   </div>
                 ))}
             </div>

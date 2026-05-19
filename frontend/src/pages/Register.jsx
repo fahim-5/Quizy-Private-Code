@@ -10,7 +10,7 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "student",
+    role: "",
     institution: "",
   });
   const [loading, setLoading] = useState(false);
@@ -33,6 +33,7 @@ export default function Register() {
       "password",
       "confirmPassword",
       "institution",
+      "role",
     ];
     const missing = requiredFields.filter(
       (k) => !(form[k] && form[k].toString().trim()),
@@ -40,6 +41,8 @@ export default function Register() {
     if (missing.length) return setError("Please fill in all required fields");
     if (form.password !== form.confirmPassword)
       return setError("Passwords do not match");
+    if ((form.password || "").length < 6)
+      return setError("Password must be at least 6 characters long");
     setLoading(true);
     try {
       await api.post("/auth/register", {

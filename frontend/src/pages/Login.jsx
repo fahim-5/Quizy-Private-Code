@@ -32,10 +32,10 @@ export default function Login() {
         localStorage.setItem("token", token);
       }
       if (user && auth?.login) {
-        auth.login(user);
+        auth.login(user, token);
       }
 
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Login failed");
     } finally {
@@ -48,7 +48,6 @@ export default function Login() {
       <div className="max-w-md w-full p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="flex flex-col items-center mb-4">
           <img src={logo} alt="Quizly" className="h-12 mb-2" />
-
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

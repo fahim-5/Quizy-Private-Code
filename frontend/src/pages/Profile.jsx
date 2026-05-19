@@ -15,17 +15,19 @@ import api from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 
 export default function Profile() {
-  const { user, logout } = useContext(AuthContext);
+  const { logout, login } = useContext(AuthContext);
 
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", institution: "" });
+  const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     fetchProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfile = async () => {
@@ -37,10 +39,44 @@ export default function Profile() {
       setProfile(res.data.data || res.data);
     } catch (err) {
       setError(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to load profile"
+        err?.response?.data?.message || err.message || "Failed to load profile",
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEdit = () => {
+    setForm({
+      name: profile.name || "",
+      email: profile.email || "",
+      institution: profile.institution || "",
+    });
+    setSuccess(null);
+    setError(null);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setForm({ name: "", email: "", institution: "" });
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.put("/users/me", form);
+      const updated = res.data.data || res.data;
+      setProfile(updated);
+      // update auth context if available
+      login && login(updated, localStorage.getItem("token"));
+      setSuccess("Profile updated");
+      setIsEditing(false);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || "Save failed");
     } finally {
       setLoading(false);
     }
@@ -51,8 +87,8 @@ export default function Profile() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-black/20 border-t-black rounded-full animate-spin" />
-          <p className="text-gray-600">Loading profile...</p>
+          <div className="w-10 h-10 border-4 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+          <p className="text-gray-500">Loading profile...</p>
         </div>
       </div>
     );
@@ -62,12 +98,12 @@ export default function Profile() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white border border-red-200 rounded-2xl shadow-lg p-6 max-w-md w-full text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-2">
+        <div className="bg-white border border-red-100 rounded-2xl shadow-sm p-6 max-w-md w-full text-center">
+          <h2 className="text-lg font-semibold text-red-500 mb-2">
             Something went wrong
           </h2>
 
-          <p className="text-gray-600 text-sm">{error}</p>
+          <p className="text-gray-500 text-sm">{error}</p>
         </div>
       </div>
     );
@@ -83,87 +119,128 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 py-10">
-      <div className="max-w-5xl mx-auto">
-        {/* Top Header */}
+    <div className="min-h-screen bg-gray-50 px-4 py-10">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              My Profile
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
 
-            <p className="text-gray-500 mt-2">
-              Manage your account information and activities.
+            <p className="text-gray-500 mt-1 text-sm">
+              View and manage your account information.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 transition"
             >
-              <FaArrowLeft size={14} />
+              <FaArrowLeft size={13} />
               Back
             </button>
 
             <button
               onClick={() => logout && logout()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black text-white hover:bg-gray-900 transition-all duration-300 shadow-md"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition"
             >
-              <FaSignOutAlt size={14} />
+              <FaSignOutAlt size={13} />
               Logout
             </button>
           </div>
         </div>
 
-        {/* Main Card */}
-        <div className="bg-white/90 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-3xl overflow-hidden">
-          {/* Top Banner */}
-          <div className="h-40 bg-gradient-to-r from-black via-gray-800 to-black relative" />
+        {/* Profile Card */}
+        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+          {/* Soft Top */}
+          <div className="h-24 bg-gray-100" />
 
-          {/* Profile Section */}
-          <div className="px-8 pb-8">
-            <div className="-mt-16 flex flex-col md:flex-row md:items-end gap-6">
+          <div className="px-6 pb-8">
+            {/* User Info */}
+            <div className="-mt-12 flex flex-col md:flex-row md:items-center gap-5">
               {/* Avatar */}
-              <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl bg-black text-white flex items-center justify-center text-5xl font-bold">
+              <div className="w-24 h-24 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-3xl font-bold border-4 border-white shadow-sm">
                 {(profile.name || profile.identifier || "U")[0].toUpperCase()}
               </div>
 
-              {/* User Info */}
               <div className="flex-1">
-                <h2 className="text-3xl font-bold text-gray-900">
-                  {profile.name || profile.identifier}
-                </h2>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <input
+                      value={form.name}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, name: e.target.value }))
+                      }
+                      className="w-full text-2xl font-semibold border-b px-2 py-1 focus:outline-none"
+                    />
 
-                <div className="flex flex-wrap items-center gap-4 mt-3 text-gray-600 text-sm">
-                  <div className="flex items-center gap-2">
-                    <FaEnvelope />
-                    {profile.email}
-                  </div>
+                    <div className="flex flex-col gap-2 mt-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <FaEnvelope />
+                        <input
+                          value={form.email}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, email: e.target.value }))
+                          }
+                          className="w-full border-b px-2 py-1 focus:outline-none"
+                        />
+                      </div>
 
-                  <div className="flex items-center gap-2">
-                    <FaUserShield />
-                    {profile.role}
+                      <div className="flex items-center gap-2">
+                        <FaUserShield />
+                        <span className="text-gray-700">{profile.role}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-semibold text-gray-800">
+                      {profile.name || profile.identifier}
+                    </h2>
+
+                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <FaEnvelope />
+                        {profile.email}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <FaUserShield />
+                        {profile.role}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
+            {/* messages */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 text-red-700 rounded">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mt-4 p-3 bg-green-50 text-green-700 rounded">
+                {success}
+              </div>
+            )}
+
             {/* Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
-              {/* Card */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+              {/* Identifier */}
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center">
                     <FaIdBadge />
                   </div>
 
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                    <p className="text-xs text-gray-400 uppercase">
                       Identifier
                     </p>
 
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-medium text-gray-700">
                       {profile.identifier}
                     </h3>
                   </div>
@@ -171,35 +248,48 @@ export default function Profile() {
               </div>
 
               {/* Institution */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center">
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center">
                     <FaSchool />
                   </div>
 
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                    <p className="text-xs text-gray-400 uppercase">
                       Institution
                     </p>
 
-                    <h3 className="font-semibold text-gray-900">
-                      {profile.institution || "Not Added"}
-                    </h3>
+                    {isEditing ? (
+                      <input
+                        value={form.institution}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            institution: e.target.value,
+                          }))
+                        }
+                        className="w-full border px-2 py-1 rounded mt-2"
+                      />
+                    ) : (
+                      <h3 className="font-medium text-gray-700">
+                        {profile.institution || "Not Added"}
+                      </h3>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Status */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                <p className="text-xs text-gray-400 uppercase mb-2">
                   Account Status
                 </p>
 
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                     profile.isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
+                      ? "bg-green-100 text-green-600"
+                      : "bg-red-100 text-red-600"
                   }`}
                 >
                   {profile.isActive ? "Active" : "Inactive"}
@@ -207,22 +297,51 @@ export default function Profile() {
               </div>
 
               {/* Joined */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                <p className="text-xs text-gray-400 uppercase mb-2">
                   Joined On
                 </p>
 
-                <h3 className="font-semibold text-gray-900">
+                <h3 className="font-medium text-gray-700">
                   {new Date(profile.createdAt).toLocaleDateString()}
                 </h3>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 mt-10">
+            {/* Actions */}
+            <div className="flex flex-wrap gap-4 mt-8">
+              {!isEditing ? (
+                <>
+                  <button
+                    onClick={startEdit}
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-100 transition"
+                  >
+                    <FaIdBadge />
+                    Edit Profile
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-green-600 text-white hover:bg-green-700 transition"
+                  >
+                    Save
+                  </button>
+
+                  <button
+                    onClick={cancelEdit}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-100 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => navigate(`/teacher`)}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-black text-white hover:bg-gray-900 transition-all duration-300 shadow-lg"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gray-800 text-white hover:bg-gray-700 transition"
               >
                 <FaChalkboardTeacher />
                 Manage Quizzes
@@ -230,7 +349,7 @@ export default function Profile() {
 
               <button
                 onClick={() => navigate(`/teacher/courses`)}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-gray-300 bg-white hover:bg-gray-100 transition-all duration-300"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-100 transition"
               >
                 <FaBook />
                 My Courses

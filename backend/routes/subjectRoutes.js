@@ -16,6 +16,9 @@ router.post(
 );
 
 // Get single subject
-router.get("/:id", subjectController.getSubject);
+router.get("/:id", optionalAuth, subjectController.getSubject);
+
+// Enroll in subject (students)
+router.post("/:id/enroll", protect, subjectController.enrollSubject);
 
 export default router;

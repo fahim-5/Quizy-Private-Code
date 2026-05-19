@@ -32,19 +32,31 @@ export const register = async (req, res, next) => {
   try {
     const { id, email, password, role, name, institution } = req.body;
 
-    if (!id || !password || !email)
+    if (!id || !password || !email || !institution || !role)
       return next(
-        new AppError("Identifier, email and password are required", 400),
+        new AppError(
+          "Identifier, email, password, institution and role are required",
+          400,
+        ),
       );
 
-    // Check if user exists by identifier or email
-    const existingById = await User.findOne({ identifier: id });
+    if ((password || "").length < 6)
+      return next(
+        new AppError("Password must be at least 6 characters long", 400),
+      );
+
+    // Check if user exists by identifier within the same institution
+    const existingById = await User.findOne({ identifier: id, institution });
     if (existingById) {
-      return next(new AppError("User already exists with this ID", 400));
+      return next(
+        new AppError("This ID is already registered for this institution", 400),
+      );
     }
+
+    // Check if email already registered (global)
     const existingByEmail = await User.findOne({ email: email.toLowerCase() });
     if (existingByEmail) {
-      return next(new AppError("User already exists with this email", 400));
+      return next(new AppError("This email already has an account", 400));
     }
 
     // Create user
@@ -53,7 +65,7 @@ export const register = async (req, res, next) => {
       identifier: id,
       email: email.toLowerCase(),
       password,
-      role: role || "student",
+      role,
       institution: institution || undefined,
     });
 

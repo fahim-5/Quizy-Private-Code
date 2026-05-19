@@ -1,5 +1,3 @@
-Absolutely — here is a **pure design specification** (no code) for your quiz app. Use this as your blueprint to build or redesign the system.
-
 ---
 
 # 🧠 QuizMaster — Complete UX/UI Design Spec
@@ -16,14 +14,58 @@ Separate secure access for Teachers and Students. No mixing of roles.
 | **Landing / Role Select** | Two large buttons: 👩‍🏫 I'm a Teacher & 👩‍🎓 I'm a Student | Clicking shows respective login form |
 | **Teacher Login** | Email, Password, "Login" button, "Forgot password?" link | After login → Teacher Dashboard |
 | **Student Login** | Student ID or Email, Password or Access Code, "Join Quiz" button | After login → Student Lobby |
-| **Register (Teacher only)** | Name, Email, Password, Confirm, School name (optional) | New teacher account creation |
-| **Register (Student)** | Name, Roll/ID, Class section, Access Code from teacher | Auto-enrolls to specific class |
+| **Register (Teacher only)** | Name, Email, Password, Confirm, Institution (required) | New teacher account creation. Role must be explicitly selected. Passwords must be at least 6 characters. Emails must be unique across the platform. |
+| **Register (Student)** | Name, Roll/ID, Class section, Institution (required), Access Code from teacher | Student registration requires explicit `role` selection. Student `identifier` (Roll/ID) must be unique only within the same `institution` (different institutions may use the same ID). Passwords must be at least 6 characters. |
 
 ### Visual Notes
-- Clean white card on soft gradient background
-- Icons next to each field
+
+---
+
+## **Registration Updates (May 2026)**
+
+- **Password minimum**: Passwords must be at least **6 characters**. Enforced on both client (frontend) and server (backend) with a clear message: "Password must be at least 6 characters long".
+- **Unique email**: Email is unique globally. Attempting to register with an email already in use returns: **"This email already has an account"**.
+- **Institution-scoped identifier (ID)**: The login `ID` (identifier) is unique _per institution_. Two users in the same institution cannot register with the same ID (error shown: **"This ID already has an account for this institution"**). Different institutions may have overlapping IDs.
+- **Institution required**: The `institution` field is mandatory at registration so the system can scope identifiers correctly.
+- **Role selection required**: The role radio buttons (Student / Teacher) are intentionally **not pre-selected** — the user must explicitly choose a role. Registration will be blocked until a valid role is selected.
+- **Improved error messages**: Backend error handling now translates database duplicate-index errors into human-friendly messages (email or identifier+institution) rather than raw DB text.
+- **Client-side validation**: Frontend validates required fields, password length, lowercases the email, and requires role selection before submitting.
+- **Server-side validation & enforcement**: Backend validates inputs, enforces password length, checks email uniqueness globally, and checks identifier uniqueness scoped to institution. Returns clear 400 responses for user-facing errors.
+- **Migration script**: A migration script `backend/scripts/migrate-identifier-institution-index.js` is included to:
+  - Find existing duplicate `identifier`+`institution` groups,
+  - Rename duplicates (keeps first) to avoid collisions,
+  - Drop any old single-field unique index on `identifier`, and
+  - Create a compound unique index on `{ identifier: 1, institution: 1 }`.
+
+**Files changed / added** (implementation):
+
+- `frontend/src/pages/Register.jsx` — require role, client password length check, email normalization.
+- `backend/middleware/validation.js` — increased password min to 6, added institution and role validation.
+- `backend/controllers/authController.js` — explicit checks for institution/role, clearer duplicate checks.
+- `backend/models/User.js` — password minlength 6; compound index `{identifier, institution}`; removed global identifier unique.
+- `backend/middleware/errorHandler.js` — friendly duplicate-key messages.
+- `backend/scripts/migrate-identifier-institution-index.js` — migration/normalization script.
+
+These changes ensure real-world institutional IDs behave as expected and provide clearer UX when users attempt to register with conflicting data.
+
 - Big, clear error messages ("Wrong password" in red)
 - "Switch to Student/Teacher" link at bottom
+
+### Registration rules (backend + frontend)
+
+- Password: minimum 6 characters (client + server validation).
+- Email: unique globally; attempting to register an email already in use returns: "This email already has an account".
+- Identifier (student/teacher ID): uniqueness is scoped to `institution` (compound unique index `{ identifier, institution }`). If the same identifier is used within the same institution the API returns: "This ID already has an account for this institution". Different institutions may have the same identifier.
+- Institution: required field during registration.
+- Role: must be explicitly selected by the user (no default selection). Registration will be rejected if `role` is missing or invalid.
+- Radio inputs: do not pre-select `student` — the user must choose `Student` or `Teacher` before submitting.
+- Error handling: server returns clear, user-friendly messages for validation and duplicate-key errors. Frontend displays those messages verbatim to the user.
+- Migration: a migration script was added at `backend/scripts/migrate-identifier-institution-index.js` which:
+  - Normalizes existing duplicates by renaming conflicting identifiers (keeps the first, appends suffixes to duplicates),
+  - Drops any old single-field unique index on `identifier` if present,
+  - Creates the compound unique index on `{ identifier, institution }` to enforce the rule going forward.
+
+These changes ensure real-world behaviour: students from different institutions can share the same roll number, while duplicates inside the same institution are prevented with clear feedback.
 
 ---
 
@@ -31,23 +73,25 @@ Separate secure access for Teachers and Students. No mixing of roles.
 
 ### 2.1 Teacher Dashboard (After Login)
 
-| Section | Content |
-|---------|---------|
-| **Header** | Welcome, [Teacher Name], today's date, Logout button |
-| **Quick Actions** | ➕ Create New Quiz, 📊 View Reports, 👥 Manage Students |
-| **Active Quizzes** | List of quizzes with: Title, Code, Status (Live/Paused/Ended), # of participants, Actions (Edit / Start / Stop / Results) |
-| **Quiz Templates** | Saved draft quizzes, copy & reuse |
-| **Recent Activity** | Last 5 student submissions with scores |
+| Section             | Content                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Header**          | Welcome, [Teacher Name], today's date, Logout button                                                                      |
+| **Quick Actions**   | ➕ Create New Quiz, 📊 View Reports, 👥 Manage Students                                                                   |
+| **Active Quizzes**  | List of quizzes with: Title, Code, Status (Live/Paused/Ended), # of participants, Actions (Edit / Start / Stop / Results) |
+| **Quiz Templates**  | Saved draft quizzes, copy & reuse                                                                                         |
+| **Recent Activity** | Last 5 student submissions with scores                                                                                    |
 
 ### 2.2 Create / Edit Quiz (Step-by-step)
 
 **Step 1 — Basic Info**
+
 - Quiz title (required)
 - Subject / Grade
 - Time limit (minutes) — optional
 - Attempts allowed (1 or multiple)
 
 **Step 2 — Add Questions**
+
 - Question types supported: MCQ, True/False, Short answer
 - Each question card shows:
   - Question text field
@@ -58,23 +102,25 @@ Separate secure access for Teachers and Students. No mixing of roles.
   - ✏️ Edit / 🗑️ Delete icons
 
 **Step 3 — Settings**
+
 - Shuffle questions? (Yes/No toggle)
 - Show answers after submission? (Yes/No)
 - Access: Public (any student with code) or Private (specific class list)
 
 **Step 4 — Publish**
+
 - Generate unique 6-digit Quiz Code
 - Option to copy code or share link
 - Set Live / Draft
 
 ### 2.3 Live Quiz Monitor (Real-time)
 
-| Panel | Shows |
-|-------|-------|
-| Left | List of currently joined students (names + status: answering / done) |
-| Center | Live question results: % correct / wrong per question |
-| Right | Controls: Pause Quiz, End Quiz, Send announcement to all |
-| Bottom | Individual student answers (expandable) |
+| Panel  | Shows                                                                |
+| ------ | -------------------------------------------------------------------- |
+| Left   | List of currently joined students (names + status: answering / done) |
+| Center | Live question results: % correct / wrong per question                |
+| Right  | Controls: Pause Quiz, End Quiz, Send announcement to all             |
+| Bottom | Individual student answers (expandable)                              |
 
 ### 2.4 Reports & Analytics
 
@@ -90,20 +136,22 @@ Separate secure access for Teachers and Students. No mixing of roles.
 
 ### 3.1 Student Lobby (After Login)
 
-| Element | Description |
-|---------|-------------|
-| Header | "Hello, [Student Name]", class name, logout |
-| Join Quiz Box | Big input field: "Enter 6-digit Quiz Code" + green "Join" button |
-| Upcoming Quizzes | List of quizzes assigned by teacher (title, date, duration) |
-| Completed Quizzes | Past attempts with scores and review link |
+| Element           | Description                                                      |
+| ----------------- | ---------------------------------------------------------------- |
+| Header            | "Hello, [Student Name]", class name, logout                      |
+| Join Quiz Box     | Big input field: "Enter 6-digit Quiz Code" + green "Join" button |
+| Upcoming Quizzes  | List of quizzes assigned by teacher (title, date, duration)      |
+| Completed Quizzes | Past attempts with scores and review link                        |
 
 ### 3.2 Taking a Quiz (Full-screen focus mode)
 
 **Before start:**
+
 - Instructions card: number of questions, time limit, points
 - "Start Quiz" button — big, green
 
 **During quiz:**
+
 - Top bar: Question counter (Q3/10), timer (if set), points earned so far
 - Main card: Question text + options (radio buttons for MCQ)
 - Navigation: Previous, Next, Submit Quiz buttons
@@ -111,6 +159,7 @@ Separate secure access for Teachers and Students. No mixing of roles.
 - Auto-save on each answer
 
 **After submission:**
+
 - Score screen: Points earned / total points, percentage
 - If teacher allows: Show correct answers with explanations
 - "Back to Lobby" button
@@ -122,38 +171,42 @@ Separate secure access for Teachers and Students. No mixing of roles.
 
 ### Color Palette
 
-| Role / Element | Color | Hex |
-|----------------|-------|-----|
-| Primary (Teacher) | Deep Indigo | #3B3F9C |
-| Primary (Student) | Vibrant Teal | #0F7B6E |
-| Success | Green | #10B981 |
-| Warning | Amber | #F59E0B |
-| Danger | Red | #EF4444 |
-| Background | Soft Gray-Blue | #F8FAFC |
-| Cards | White | #FFFFFF |
-| Text Dark | Slate Gray | #1E293B |
+| Role / Element    | Color          | Hex     |
+| ----------------- | -------------- | ------- |
+| Primary (Teacher) | Deep Indigo    | #3B3F9C |
+| Primary (Student) | Vibrant Teal   | #0F7B6E |
+| Success           | Green          | #10B981 |
+| Warning           | Amber          | #F59E0B |
+| Danger            | Red            | #EF4444 |
+| Background        | Soft Gray-Blue | #F8FAFC |
+| Cards             | White          | #FFFFFF |
+| Text Dark         | Slate Gray     | #1E293B |
 
 ### Typography
 
-| Element | Font Weight | Size |
-|---------|-------------|------|
-| App title | Bold | 28px |
-| Section headings | Semi-bold | 20px |
-| Body text | Regular | 16px |
-| Small metadata | Regular | 13px |
-| Buttons | Medium | 14–16px |
+| Element          | Font Weight | Size    |
+| ---------------- | ----------- | ------- |
+| App title        | Bold        | 28px    |
+| Section headings | Semi-bold   | 20px    |
+| Body text        | Regular     | 16px    |
+| Small metadata   | Regular     | 13px    |
+| Buttons          | Medium      | 14–16px |
 
 ### Spacing Rhythm
+
 - 8px base unit
 - Card padding: 24px
 - Between elements: 12–16px
 - Button height: 48px (touch-friendly)
 
 ### Icons
+
 Use outline style (Feather or Lucide):
+
 - 👤 User, 🔒 Lock, 📋 Quiz, 📊 Chart, ⏱️ Timer, ✏️ Edit, 🗑️ Trash, 📎 Copy, 🚪 Logout
 
 ### Mobile & Tablet Adaptations
+
 - Stack columns on mobile
 - Touch targets minimum 44x44px
 - Question palette becomes horizontal scroll on small screens
@@ -164,18 +217,21 @@ Use outline style (Feather or Lucide):
 ## 5. USER EXPERIENCE (UX) PRINCIPLES
 
 ### For Teachers
+
 - **One-click publish** — after creating quiz, one button makes it live
 - **Bulk import** — upload questions via CSV or copy-paste from Word
 - **Duplicate quiz** — reuse last week's quiz with new date
 - **Live notifications** — when student submits, teacher sees real-time (optional sound)
 
 ### For Students
+
 - **Zero distraction** — no ads, no unrelated content during quiz
 - **Auto-resume** — if browser closes, student can re-enter with same code and continue where left off (if time remains)
 - **Clear feedback** — green check for correct, red X for wrong after submission
 - **Keyboard shortcuts** — press Enter to submit, number keys 1-4 to select options
 
 ### Both Roles
+
 - **Dark mode** toggle (optional but nice)
 - **Offline warning** — if connection lost, show banner "Reconnecting..."
 - **Session timeout** — after 30 min inactivity, logout for security
@@ -185,6 +241,7 @@ Use outline style (Feather or Lucide):
 ## 6. PAGE LAYOUTS (Wireframe style)
 
 ### Authentication Screen
+
 ```
 ┌─────────────────────────────────────────────┐
 │                  🧠 QuizMaster               │
@@ -202,6 +259,7 @@ Use outline style (Feather or Lucide):
 ```
 
 ### Teacher Dashboard
+
 ```
 ┌─ Header: Welcome back, Ms. Johnson ─ Logout ─┐
 │                                               │
@@ -219,6 +277,7 @@ Use outline style (Feather or Lucide):
 ```
 
 ### Student Quiz Screen
+
 ```
 ┌─ Q3/10 │ ⏱️ 04:32 left │ 🏆 15 points ──────┐
 │                                              │
@@ -254,14 +313,14 @@ Use outline style (Feather or Lucide):
 
 ## 8. KEY FEATURES SUMMARY (Checklist)
 
-| Auth | Teacher | Student |
-|------|---------|---------|
-| ✅ Role-based login | ✅ Create/edit quizzes | ✅ Join with code |
-| ✅ Secure registration | ✅ Live monitoring | ✅ Timer & auto-submit |
-| ✅ Password reset | ✅ Auto-grading (MCQ) | ✅ Question palette |
-| ✅ Session management | ✅ Manual grading (short answer) | ✅ Review answers |
-|  | ✅ CSV export results | ✅ View past scores |
-|  | ✅ Question bank | ✅ Leaderboard (optional) |
+| Auth                   | Teacher                          | Student                   |
+| ---------------------- | -------------------------------- | ------------------------- |
+| ✅ Role-based login    | ✅ Create/edit quizzes           | ✅ Join with code         |
+| ✅ Secure registration | ✅ Live monitoring               | ✅ Timer & auto-submit    |
+| ✅ Password reset      | ✅ Auto-grading (MCQ)            | ✅ Question palette       |
+| ✅ Session management  | ✅ Manual grading (short answer) | ✅ Review answers         |
+|                        | ✅ CSV export results            | ✅ View past scores       |
+|                        | ✅ Question bank                 | ✅ Leaderboard (optional) |
 
 ---
 
