@@ -123,8 +123,13 @@ export default function Courses() {
                 Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Enroll Key
+                Instructor
               </th>
+              {user && user.role === "teacher" && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Enroll Key
+                </th>
+              )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
@@ -139,9 +144,43 @@ export default function Courses() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   {s.name}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  {s.enrollKey}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      {s.createdBy?.name || s.createdBy?.identifier || "—"}
+                    </span>
+                    {s.createdBy?.email && (
+                      <button
+                        onClick={() => {
+                          const email = s.createdBy?.email;
+                          if (email) window.location.href = `mailto:${email}`;
+                        }}
+                        title="Message instructor"
+                        className="p-1 bg-black text-white rounded-md flex items-center justify-center"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </td>
+                {user && user.role === "teacher" && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    {s.enrollKey}
+                  </td>
+                )}
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   <button
                     onClick={async () => {
@@ -187,7 +226,10 @@ export default function Courses() {
             ))}
             {subjects.length === 0 && !loading && (
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-sm text-gray-500">
+                <td
+                  colSpan={user && user.role === "teacher" ? 5 : 4}
+                  className="px-6 py-4 text-sm text-gray-500"
+                >
                   No courses found
                 </td>
               </tr>
@@ -195,7 +237,6 @@ export default function Courses() {
           </tbody>
         </table>
       </div>
-      
 
       {showCreate && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40">

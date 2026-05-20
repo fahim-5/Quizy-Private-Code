@@ -58,7 +58,7 @@ const getSubjects = async (req, res, next) => {
       })
         .limit(200)
         .sort({ createdAt: -1 })
-        .populate("createdBy", "name identifier");
+        .populate("createdBy", "name identifier institution email");
       return res.json({ success: true, subjects });
     }
 
@@ -85,7 +85,7 @@ const getSubjects = async (req, res, next) => {
     let subjects = await Subject.find(query)
       .limit(200)
       .sort({ createdAt: -1 })
-      .populate("createdBy", "name identifier")
+      .populate("createdBy", "name identifier institution email")
       .populate("enrolledUsers", "_id");
 
     // If a user is present (optional auth), annotate subjects with isEnrolled boolean
@@ -110,7 +110,7 @@ const getSubjects = async (req, res, next) => {
 const getSubject = async (req, res, next) => {
   try {
     const subject = await Subject.findById(req.params.id)
-      .populate("createdBy", "name identifier")
+      .populate("createdBy", "name identifier institution email")
       .populate("enrolledUsers", "_id name");
     if (!subject)
       return res.status(404).json({ success: false, message: "Not found" });

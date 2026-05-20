@@ -28,14 +28,25 @@ export default function Dashboard() {
         user && user.role === "teacher"
           ? "/quizzes?all=true&mine=true"
           : "/quizzes";
-      const calls = [api.get(quizUrl), api.get("/results")];
-      // also fetch subjects for students view
-      calls.push(api.get("/subjects"));
-      const [qRes, rRes, sRes] = await Promise.all(calls);
-
-      setQuizzes(qRes.data.quizzes || qRes.data || []);
-      setResults(rRes.data || []);
-      setSubjects((sRes && (sRes.data.subjects || sRes.data)) || []);
+      // For students we need quizzes, their own results, and subjects
+      if (user && user.role === "teacher") {
+        const [qRes, sRes] = await Promise.all([
+          api.get(quizUrl),
+          api.get("/subjects"),
+        ]);
+        setQuizzes(qRes.data.quizzes || qRes.data || []);
+        setSubjects((sRes && (sRes.data.subjects || sRes.data)) || []);
+        setResults([]);
+      } else {
+        const [qRes, rRes, sRes] = await Promise.all([
+          api.get(quizUrl),
+          api.get("/results/me"),
+          api.get("/subjects"),
+        ]);
+        setQuizzes(qRes.data.quizzes || qRes.data || []);
+        setResults((rRes && (rRes.data?.results || rRes.data)) || []);
+        setSubjects((sRes && (sRes.data.subjects || sRes.data)) || []);
+      }
     } catch (err) {
       try {
         const qOnly = await api.get(
@@ -181,81 +192,69 @@ export default function Dashboard() {
         ) : (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Available Courses</h2>
-              <div>
-                <button
-                  onClick={() => navigate("/courses")}
-                  className="text-sm text-gray-600"
-                >
-                  View all
-                </button>
-              </div>
+              <h2 className="text-xl font-semibold">
+                Available Quizzes for You
+              </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {subjects.length === 0 && (
-                <div className="col-span-full p-6 bg-white rounded shadow">
-                  No courses available yet.
-                </div>
-              )}
 
-              {subjects
-                .sort(
-                  (a, b) =>
-                    new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
-                )
-                .slice(0, 9)
-                .map((s) => (
-                  <div
-                    key={s._id}
-                    className="bg-white rounded shadow p-6 h-56 flex flex-col justify-between"
-                  >
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                        {s.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Code: {s.code || "-"}
-                      </p>
+            {/* Show up to 6 quizzes (3 columns) from enrolled courses only — prefer unattempted first */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {(() => {
+                const enrolled = subjects.filter((s) => s.isEnrolled);
+                if (!enrolled || enrolled.length === 0) {
+                  return (
+                    <div className="col-span-full p-6 bg-white rounded shadow">
+                      No enrolled courses yet.
                     </div>
-                    <div className="mt-2">
-                      <button
-                        onClick={async () => {
-                          // For students, show enroll modal if not enrolled; for teachers navigate
-                          if (user && user.role === "teacher") {
-                            navigate(`/teacher/courses/${s._id}`);
-                            return;
-                          }
-                          try {
-                            const res = await api.get(`/subjects/${s._id}`);
-                            const isEnrolled = res.data && res.data.isEnrolled;
-                            if (isEnrolled) {
-                              navigate(`/courses/${s._id}`);
-                            } else {
-                              setEnrollModal({
-                                show: true,
-                                subject: res.data.subject || s,
-                                enrollKey: "",
-                                error: null,
-                                loading: false,
-                              });
-                            }
-                          } catch (err) {
-                            setEnrollModal({
-                              show: true,
-                              subject: s,
-                              enrollKey: "",
-                              error: null,
-                              loading: false,
-                            });
-                          }
-                        }}
-                        className="w-full px-4 py-2 bg-black text-white rounded-md"
-                      >
-                        View Course
-                      </button>
+                  );
+                }
+
+                const enrolledIds = new Set(enrolled.map((s) => String(s._id)));
+                const candidateQuizzes = (quizzes || []).filter(
+                  (q) =>
+                    q &&
+                    q.subject &&
+                    enrolledIds.has(String(q.subject._id || q.subject)),
+                );
+
+                const attemptedQuizIds = new Set(
+                  (results || [])
+                    .map((r) =>
+                      r.quiz?._id ? String(r.quiz._id) : String(r.quiz),
+                    )
+                    .filter(Boolean),
+                );
+
+                const unattempted = candidateQuizzes
+                  .filter((q) => !attemptedQuizIds.has(String(q._id)))
+                  .sort(
+                    (a, b) =>
+                      new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+                  );
+
+                const attempted = candidateQuizzes
+                  .filter((q) => attemptedQuizIds.has(String(q._id)))
+                  .sort(
+                    (a, b) =>
+                      new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+                  );
+
+                const list = [...unattempted, ...attempted].slice(0, 6);
+
+                if (list.length === 0) {
+                  return (
+                    <div className="col-span-full p-6 bg-white rounded shadow">
+                      No quizzes available from your enrolled courses.
                     </div>
+                  );
+                }
+
+                return list.map((q) => (
+                  <div key={q._id}>
+                    <QuizCard quiz={q} onStart={() => handleStart(q)} />
                   </div>
-                ))}
+                ));
+              })()}
             </div>
           </section>
         )}

@@ -74,20 +74,53 @@ export default function CourseDetail() {
               <span>Show only my quizzes</span>
             </label>
           )}
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate(`/teacher/create?subject=${subject._id}`)}
-              className="bg-black text-white px-4 py-2 rounded-md"
-            >
-              Add Quiz
-            </button>
-            <button
-              onClick={() => navigate("/teacher")}
-              className="border px-4 py-2 rounded-md"
-            >
-              Back
-            </button>
-          </div>
+
+          {user && user.role === "teacher" ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  navigate(`/teacher/create?subject=${subject._id}`)
+                }
+                className="bg-black text-white px-4 py-2 rounded-md"
+              >
+                Add Quiz
+              </button>
+              <button
+                onClick={() => navigate("/teacher")}
+                className="border px-4 py-2 rounded-md"
+              >
+                Back
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="text-left">
+                <div className="text-xl md:text-2xl font-extrabold text-gray-900">
+                  {subject.createdBy?.name ||
+                    subject.createdBy?.identifier ||
+                    "—"}
+                </div>
+                <div className="text-lg md:text-xl text-gray-700">
+                  {subject.createdBy?.institution || ""}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const email = subject.createdBy?.email;
+                  if (email) window.location.href = `mailto:${email}`;
+                }}
+                className="px-4 py-2 bg-black text-white rounded-md"
+              >
+                Contact
+              </button>
+              <button
+                onClick={() => navigate(-1)}
+                className="border px-4 py-2 rounded-md"
+              >
+                Back
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -156,6 +156,7 @@ const Navbar = () => {
     }
     if (user.role === "student") {
       navigation.push({ name: "My Courses", href: "/courses?enrolled=true" });
+      navigation.push({ name: "All Courses", href: "/courses" });
     }
   }
 
@@ -250,19 +251,35 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`${
-                  location.pathname === item.href
-                    ? "text-black border-b-2 border-black"
-                    : "text-black hover:text-gray-600"
-                } px-3 py-2 text-sm font-medium transition-colors duration-200`}
-              >
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const hasQuery = item.href && item.href.includes("?");
+              const toProp = hasQuery
+                ? {
+                    pathname: item.href.split("?")[0],
+                    search: `?${item.href.split("?")[1]}`,
+                  }
+                : item.href;
+              const isActive = hasQuery
+                ? location.pathname === toProp.pathname &&
+                  location.search === toProp.search
+                : location.pathname ===
+                    (typeof toProp === "string" ? toProp : toProp.pathname) &&
+                  location.search === "";
+
+              return (
+                <Link
+                  key={item.name}
+                  to={toProp}
+                  className={`${
+                    isActive
+                      ? "text-black border-b-2 border-black"
+                      : "text-black hover:text-gray-600"
+                  } px-3 py-2 text-sm font-medium transition-colors duration-200`}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
 
             {!user ? (
               <div className="flex items-center space-x-2">
@@ -365,20 +382,36 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden" ref={mobileMenuRef}>
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`${
-                    location.pathname === item.href
-                      ? "bg-gray-100 text-black"
-                      : "text-black hover:bg-gray-50 hover:text-gray-600"
-                  } block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const hasQuery = item.href && item.href.includes("?");
+                const toProp = hasQuery
+                  ? {
+                      pathname: item.href.split("?")[0],
+                      search: `?${item.href.split("?")[1]}`,
+                    }
+                  : item.href;
+                const isActive = hasQuery
+                  ? location.pathname === toProp.pathname &&
+                    location.search === toProp.search
+                  : location.pathname ===
+                      (typeof toProp === "string" ? toProp : toProp.pathname) &&
+                    location.search === "";
+
+                return (
+                  <Link
+                    key={item.name}
+                    to={toProp}
+                    onClick={() => setIsOpen(false)}
+                    className={`${
+                      isActive
+                        ? "bg-gray-100 text-black"
+                        : "text-black hover:bg-gray-50 hover:text-gray-600"
+                    } block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
 
               <div className="mt-2 border-t pt-2">
                 {!user ? (
