@@ -140,14 +140,6 @@ export default function Profile() {
               <FaArrowLeft size={13} />
               Back
             </button>
-
-            <button
-              onClick={() => logout && logout()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition"
-            >
-              <FaSignOutAlt size={13} />
-              Logout
-            </button>
           </div>
         </div>
 
