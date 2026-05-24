@@ -136,94 +136,109 @@ export default function Courses() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {visible.map((s) => (
-              <tr key={s._id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  {s.code}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  {s.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span>
-                      {s.createdBy?.name || s.createdBy?.identifier || "—"}
-                    </span>
-                    {s.createdBy?.email && (
-                      <button
-                        onClick={() => {
-                          const email = s.createdBy?.email;
-                          if (email) window.location.href = `mailto:${email}`;
-                        }}
-                        title="Message instructor"
-                        className="p-1 bg-black text-white rounded-md flex items-center justify-center"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                          />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </td>
-                {user && user.role === "teacher" && (
+            {visible.map((s) => {
+              const isOwner =
+                user &&
+                user.role === "teacher" &&
+                (s.createdBy?._id === user._id ||
+                  s.createdBy?.identifier === user.identifier ||
+                  s.createdBy?.email === user.email);
+
+              return (
+                <tr key={s._id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                    {s.enrollKey}
+                    {s.code}
                   </td>
-                )}
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  <button
-                    onClick={async () => {
-                      // fetch subject to check enrollment
-                      try {
-                        const res = await api.get(`/subjects/${s._id}`);
-                        const isEnrolled = res.data && res.data.isEnrolled;
-                        if (isEnrolled) {
-                          navigate(
-                            user && user.role === "teacher"
-                              ? `/teacher/courses/${s._id}`
-                              : `/courses/${s._id}`,
-                          );
-                        } else {
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    {s.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <span>
+                        {s.createdBy?.name || s.createdBy?.identifier || "—"}
+                      </span>
+                      {s.createdBy?.email && (
+                        <button
+                          onClick={() => {
+                            const email = s.createdBy?.email;
+                            if (email) window.location.href = `mailto:${email}`;
+                          }}
+                          title="Message instructor"
+                          className="p-1 bg-black text-white rounded-md flex items-center justify-center"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  {user && user.role === "teacher" && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                      {s.enrollKey}
+                    </td>
+                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    <button
+                      onClick={async () => {
+                        // Teachers who own the course are treated as enrolled
+                        if (isOwner) {
+                          navigate(`/teacher/courses/${s._id}`);
+                          return;
+                        }
+
+                        // fetch subject to check enrollment for others
+                        try {
+                          const res = await api.get(`/subjects/${s._id}`);
+                          const isEnrolled = res.data && res.data.isEnrolled;
+                          if (isEnrolled) {
+                            navigate(
+                              user && user.role === "teacher"
+                                ? `/teacher/courses/${s._id}`
+                                : `/courses/${s._id}`,
+                            );
+                          } else {
+                            setEnrollModal({
+                              show: true,
+                              subject: res.data.subject || s,
+                              enrollKey: "",
+                              error: null,
+                              loading: false,
+                            });
+                          }
+                        } catch (err) {
                           setEnrollModal({
                             show: true,
-                            subject: res.data.subject || s,
+                            subject: s,
                             enrollKey: "",
                             error: null,
                             loading: false,
                           });
                         }
-                      } catch (err) {
-                        setEnrollModal({
-                          show: true,
-                          subject: s,
-                          enrollKey: "",
-                          error: null,
-                          loading: false,
-                        });
-                      }
-                    }}
-                    className={`${
-                      s.isEnrolled
-                        ? "text-sm px-2 py-1 bg-green-600 text-white rounded-md"
-                        : "text-sm px-2 py-1 border rounded-md"
-                    }`}
-                  >
-                    View Course
-                  </button>
-                </td>
-              </tr>
-            ))}
+                      }}
+                      className={`${
+                        isOwner || s.isEnrolled
+                          ? "text-sm px-2 py-1 bg-green-600 text-white rounded-md"
+                          : "text-sm px-2 py-1 border rounded-md"
+                      }`}
+                    >
+                      View Course
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
             {subjects.length === 0 && !loading && (
               <tr>
                 <td

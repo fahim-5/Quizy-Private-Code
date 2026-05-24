@@ -15,8 +15,9 @@ export default function CourseDetail() {
   const { user } = useAuth() || {};
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const initialMine =
-    params.get("mine") === "true" || (user && user.role === "teacher");
+  // Default to the `mine` query param only. Do not force teachers to see only
+  // their quizzes by default; allow them to toggle the checkbox if desired.
+  const initialMine = params.get("mine") === "true";
   const [showOnlyMine, setShowOnlyMine] = useState(initialMine);
 
   useEffect(() => {
