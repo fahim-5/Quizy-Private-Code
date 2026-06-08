@@ -247,7 +247,9 @@ export default function Register() {
                 type="button"
                 aria-pressed={showConfirmPassword}
                 onClick={() => setShowConfirmPassword((s) => !s)}
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
                 title={showConfirmPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-700 hover:opacity-80"
               >
@@ -455,7 +457,11 @@ export default function Register() {
                         loading: false,
                         show: false,
                       }));
-                      navigate("/dashboard");
+                      navigate(
+                        user && user.role === "teacher"
+                          ? "/dashboard/teacher"
+                          : "/dashboard/student",
+                      );
                     } catch (err) {
                       setVerifyModal((v) => ({
                         ...v,

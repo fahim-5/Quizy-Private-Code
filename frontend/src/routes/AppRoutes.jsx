@@ -5,6 +5,7 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Forgot from "../pages/Forgot";
 import Dashboard from "../pages/Dashboard";
+import useAuth from "../hooks/useAuth";
 import TakeQuiz from "../pages/TakeQuiz";
 import Join from "../pages/Join";
 import Result from "../pages/Result";
@@ -21,6 +22,14 @@ import Profile from "../pages/Profile";
 import Settings from "../pages/Settings";
 
 export default function AppRoutes() {
+  const AuthRedirect = () => {
+    const auth = useAuth();
+    const user = auth?.user || null;
+    if (user && user.role === "teacher")
+      return <Navigate to="/dashboard/teacher" replace />;
+    return <Navigate to="/dashboard/student" replace />;
+  };
+
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
@@ -30,7 +39,9 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/join" element={<Join />} />
       <Route path="/lobby" element={<StudentLobby />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard" element={<AuthRedirect />} />
+      <Route path="/dashboard/teacher" element={<Dashboard />} />
+      <Route path="/dashboard/student" element={<Dashboard />} />
       <Route path="/quiz/:id" element={<TakeQuiz />} />
       <Route path="/result" element={<Result />} />
       <Route path="/results" element={<ResultsHistory />} />

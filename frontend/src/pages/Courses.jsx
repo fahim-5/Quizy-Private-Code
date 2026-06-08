@@ -160,7 +160,7 @@ export default function Courses() {
                       <span>
                         {s.createdBy?.name || s.createdBy?.identifier || "—"}
                       </span>
-                      {s.createdBy?.email && (
+                      {s.createdBy?.email && !isOwner && (
                         <button
                           onClick={() => {
                             const email = s.createdBy?.email;

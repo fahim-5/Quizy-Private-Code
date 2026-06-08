@@ -83,17 +83,6 @@ export default function CourseDetail() {
           <div className="text-sm text-gray-600">Code: {subject.code}</div>
         </div>
         <div className="flex items-center gap-4">
-          {user && user.role === "teacher" && (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={showOnlyMine}
-                onChange={(e) => setShowOnlyMine(e.target.checked)}
-              />
-              <span>Show only my quizzes</span>
-            </label>
-          )}
-
           {user && user.role === "teacher" ? (
             <div className="flex gap-2">
               <button

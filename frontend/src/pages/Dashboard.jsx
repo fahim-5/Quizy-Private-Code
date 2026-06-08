@@ -111,7 +111,7 @@ export default function Dashboard() {
 
   // Re-fetch when the route changes back to the dashboard (fixes missing courses after navigation)
   useEffect(() => {
-    if (location?.pathname === "/dashboard") {
+    if (location?.pathname && location.pathname.startsWith("/dashboard")) {
       fetchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

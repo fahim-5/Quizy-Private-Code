@@ -166,7 +166,11 @@ const Navbar = () => {
   // show navigation items only for authenticated users
   const navigation = [];
   if (user) {
-    navigation.push({ name: "Dashboard", href: "/dashboard" });
+    navigation.push({
+      name: "Dashboard",
+      href:
+        user.role === "teacher" ? "/dashboard/teacher" : "/dashboard/student",
+    });
     if (user.role === "teacher") {
       navigation.push({ name: "My Courses", href: "/teacher/courses" });
     }
@@ -182,7 +186,15 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate(user ? "/dashboard" : "/login")}
+              onClick={() =>
+                navigate(
+                  user
+                    ? user.role === "teacher"
+                      ? "/dashboard/teacher"
+                      : "/dashboard/student"
+                    : "/login",
+                )
+              }
               className="flex-shrink-0 flex items-center"
               aria-label="Home"
             >
@@ -454,7 +466,11 @@ const Navbar = () => {
                 ) : (
                   <>
                     <Link
-                      to="/dashboard"
+                      to={
+                        user.role === "teacher"
+                          ? "/dashboard/teacher"
+                          : "/dashboard/student"
+                      }
                       onClick={() => setIsOpen(false)}
                       className="block px-3 py-2 text-base text-black"
                     >

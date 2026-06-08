@@ -36,7 +36,11 @@ export default function Login() {
         auth.login(user, token);
       }
 
-      navigate("/dashboard");
+      navigate(
+        user && user.role === "teacher"
+          ? "/dashboard/teacher"
+          : "/dashboard/student",
+      );
     } catch (err) {
       const status = err?.response?.status;
       if (status === 401) setError("Wrong password");

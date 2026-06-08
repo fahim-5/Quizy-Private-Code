@@ -68,10 +68,19 @@ if (process.env.NODE_ENV !== "production") {
   app.options("*", cors(corsOptions));
 }
 
-// Rate limiting
+// Rate limiting: apply global limiter but skip auth endpoints to avoid blocking login flows during development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
+  // don't apply global limit to auth routes (login/register) to avoid accidental 429 during testing
+  skip: (req) => {
+    try {
+      const p = req.path || "";
+      return p.startsWith("/api/auth");
+    } catch (e) {
+      return false;
+    }
+  },
 });
 app.use(limiter);
 
