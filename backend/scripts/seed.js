@@ -14,7 +14,13 @@ const UserSchema = new mongoose.Schema(
   {
     name: String,
     identifier: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
     password: String,
     role: {
       type: String,
@@ -65,7 +71,8 @@ const ResultSchema = new mongoose.Schema({
 
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 const Quiz = mongoose.models.Quiz || mongoose.model("Quiz", QuizSchema);
-const Subject = mongoose.models.Subject || mongoose.model("Subject", SubjectSchema);
+const Subject =
+  mongoose.models.Subject || mongoose.model("Subject", SubjectSchema);
 const Question =
   mongoose.models.Question || mongoose.model("Question", QuestionSchema);
 const Result = mongoose.models.Result || mongoose.model("Result", ResultSchema);
@@ -108,8 +115,7 @@ async function seed() {
     role: "student",
   });
 
-  con  cd backend
-  npm run devsole.log("Created users:", {
+  console.log("Created users:", {
     teacherSeed: admin._id.toString(),
     teacher: teacher._id.toString(),
     student: student._id.toString(),

@@ -10,7 +10,7 @@ const Navbar = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth() || {};
+  const { user, logout, token } = useAuth() || {};
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [quizzesCache, setQuizzesCache] = useState([]);
@@ -28,8 +28,18 @@ const Navbar = () => {
       if (!user || user.role !== "teacher") return;
       try {
         const [qRes, sRes] = await Promise.allSettled([
-          api.get("/quizzes?all=true"),
-          api.get("/subjects"),
+          api.get(
+            "/quizzes?all=true",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
+          api.get(
+            "/subjects",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
         ]);
         if (!mounted) return;
         const quizzes =
@@ -116,8 +126,14 @@ const Navbar = () => {
           : `/quizzes?search=${encodeURIComponent(q)}`;
       const subjectUrl = `/subjects?search=${encodeURIComponent(q)}`;
       const [sRes, qRes] = await Promise.allSettled([
-        api.get(subjectUrl),
-        api.get(quizUrl),
+        api.get(
+          subjectUrl,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+        ),
+        api.get(
+          quizUrl,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+        ),
       ]);
 
       const subjects =

@@ -42,11 +42,20 @@ export function AuthProvider({ children }) {
 
   const login = (userData, authToken) => {
     setUser(userData || null);
-    if (authToken) setToken(authToken);
+    if (authToken) {
+      // Persist token immediately to avoid race condition with requests
+      try {
+        localStorage.setItem("token", authToken);
+      } catch (e) {}
+      setToken(authToken);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    try {
+      localStorage.removeItem("token");
+    } catch (e) {}
     setToken(null);
   };
 

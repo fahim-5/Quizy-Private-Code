@@ -4,7 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function Courses() {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,10 @@ export default function Courses() {
         onlyMine && user && user._id
           ? `/subjects?teacherId=${user._id}`
           : "/subjects";
-      const res = await api.get(url);
+      const res = await api.get(
+        url,
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+      );
       const list = (res && res.data && res.data.subjects) || [];
       setSubjects(list);
     } catch (err) {
@@ -200,7 +203,14 @@ export default function Courses() {
 
                         // fetch subject to check enrollment for others
                         try {
-                          const res = await api.get(`/subjects/${s._id}`);
+                          const res = await api.get(
+                            `/subjects/${s._id}`,
+                            token
+                              ? {
+                                  headers: { Authorization: `Bearer ${token}` },
+                                }
+                              : undefined,
+                          );
                           const isEnrolled = res.data && res.data.isEnrolled;
                           if (isEnrolled) {
                             navigate(
@@ -307,7 +317,13 @@ export default function Courses() {
                       code: form.code,
                       enrollKey: form.enrollKey,
                     };
-                    const res = await api.post("/subjects", payload);
+                    const res = await api.post(
+                      "/subjects",
+                      payload,
+                      token
+                        ? { headers: { Authorization: `Bearer ${token}` } }
+                        : undefined,
+                    );
                     setShowCreate(false);
                     setForm({ name: "", code: "", enrollKey: "" });
                     // refresh list after creation
@@ -383,6 +399,9 @@ export default function Courses() {
                     await api.post(
                       `/subjects/${enrollModal.subject._id}/enroll`,
                       { enrollKey: enrollModal.enrollKey },
+                      token
+                        ? { headers: { Authorization: `Bearer ${token}` } }
+                        : undefined,
                     );
                     // go to course after successful enroll
                     navigate(

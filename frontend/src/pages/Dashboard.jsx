@@ -6,7 +6,7 @@ import QuizCard from "../components/QuizCard";
 import TeacherAnalytics from "../components/AdminAnalytics";
 
 export default function Dashboard() {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [enrollModal, setEnrollModal] = useState({
@@ -31,17 +31,42 @@ export default function Dashboard() {
       // For students we need quizzes, their own results, and subjects
       if (user && user.role === "teacher") {
         const [qRes, sRes] = await Promise.all([
-          api.get(quizUrl),
-          api.get("/subjects"),
+          api.get(
+            quizUrl,
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
+          api.get(
+            "/subjects",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
         ]);
         setQuizzes(qRes.data.quizzes || qRes.data || []);
         setSubjects((sRes && (sRes.data.subjects || sRes.data)) || []);
         setResults([]);
       } else {
         const [qRes, rRes, sRes] = await Promise.all([
-          api.get(quizUrl),
-          api.get("/results/me"),
-          api.get("/subjects"),
+          api.get(
+            quizUrl,
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
+          api.get(
+            "/results/me",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
+          api.get(
+            "/subjects",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
         ]);
         setQuizzes(qRes.data.quizzes || qRes.data || []);
         setResults((rRes && (rRes.data?.results || rRes.data)) || []);
@@ -53,6 +78,7 @@ export default function Dashboard() {
           user && user.role === "teacher"
             ? "/quizzes?all=true&mine=true"
             : "/quizzes",
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
         );
         setQuizzes(qOnly.data.quizzes || qOnly.data || []);
         // attempt to load subjects as fallback
@@ -310,6 +336,9 @@ export default function Dashboard() {
                       await api.post(
                         `/subjects/${enrollModal.subject._id}/enroll`,
                         { enrollKey: enrollModal.enrollKey },
+                        token
+                          ? { headers: { Authorization: `Bearer ${token}` } }
+                          : undefined,
                       );
                       // go to course after successful enroll
                       navigate(`/courses/${enrollModal.subject._id}`);
