@@ -99,13 +99,15 @@ export default function AdminPanel() {
       const payload = {
         title: newQuiz.title,
         description: newQuiz.description,
-        timeLimit: Number(newQuiz.timeLimit) || 0,
+        // admin/new-quiz input is minutes — convert to seconds for backend
+        timeLimit: (Number(newQuiz.timeLimit) || 0) * 60,
         rules: newQuiz.rules,
         visibleFrom: newQuiz.visibleFrom || undefined,
         startFrom: newQuiz.startFrom || undefined,
       };
       await api.post("/quizzes", payload);
-      setNewQuiz({ title: "", description: "", timeLimit: 300, rules: "" });
+      // default timeLimit in minutes (30 minutes)
+      setNewQuiz({ title: "", description: "", timeLimit: 30, rules: "" });
       setShowCreate(false);
       await fetchAll();
     } catch (err) {

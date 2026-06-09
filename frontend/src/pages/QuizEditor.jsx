@@ -26,6 +26,8 @@ export default function QuizEditor() {
           startFrom: "",
         },
   );
+  const [visibleImmediate, setVisibleImmediate] = useState(true);
+  const [startImmediate, setStartImmediate] = useState(true);
 
   const { user, token } = useContext(AuthContext);
 
@@ -56,6 +58,11 @@ export default function QuizEditor() {
     if (preSub && !existingId) {
       setQuiz((q) => ({ ...q, subject: preSub }));
     }
+    // default immediacy when creating a new quiz
+    if (!existingId) {
+      setVisibleImmediate(true);
+      setStartImmediate(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingId]);
 
@@ -63,13 +70,31 @@ export default function QuizEditor() {
     setLoading(true);
     try {
       const res = await api.get(`/quizzes/${qid}`);
-      setQuiz(res.data.quiz);
+      const q = res.data.quiz;
+      // normalize timeLimit to minutes for editor state (backend stores seconds)
+      const minutes = q && q.timeLimit ? Math.round(q.timeLimit / 60) : 0;
+      setQuiz({ ...q, timeLimit: minutes });
+      // set immediacy flags based on existing values
+      setVisibleImmediate(!q?.visibleFrom);
+      setStartImmediate(!q?.startFrom);
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Failed");
     } finally {
       setLoading(false);
     }
   };
+
+  function toLocalInput(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60000);
+      return local.toISOString().slice(0, 16);
+    } catch (e) {
+      return "";
+    }
+  }
 
   const createQuiz = async () => {
     if (!quiz || !quiz.title || quiz.title.trim() === "") {
@@ -86,7 +111,8 @@ export default function QuizEditor() {
         subject: quiz.subject,
         title: quiz.title,
         description: quiz.description,
-        timeLimit: Number(quiz.timeLimit) || 0,
+        // frontend input is minutes; backend stores seconds — convert to seconds
+        timeLimit: (Number(quiz.timeLimit) || 0) * 60,
         visibleFrom: quiz.visibleFrom
           ? new Date(quiz.visibleFrom).toISOString()
           : undefined,
@@ -277,13 +303,15 @@ export default function QuizEditor() {
                 </label>
                 <input
                   type="number"
-                  value={quiz?.timeLimit || 0}
+                  value={quiz?.timeLimit ? Math.round(quiz.timeLimit / 60) : 0}
                   onChange={(e) =>
                     setQuiz((q) => ({
                       ...q,
+                      // store minutes in state for the editor; will convert to seconds on submit
                       timeLimit: Number(e.target.value),
                     }))
                   }
+                  placeholder="Enter time in minutes for quiz"
                   className="w-full border border-gray-300 rounded-md px-2 py-1"
                 />
               </div>
@@ -293,38 +321,66 @@ export default function QuizEditor() {
                 <label className="block text-sm font-medium text-black">
                   Visible From (when students can see the quiz)
                 </label>
-                <input
-                  type="datetime-local"
-                  value={
-                    quiz?.visibleFrom
-                      ? new Date(quiz.visibleFrom).toISOString().slice(0, 16)
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setQuiz((q) => ({
-                      ...q,
-                      visibleFrom: e.target.value || "",
-                    }))
-                  }
-                  className="w-full border border-gray-300 rounded-md px-2 py-1"
-                />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="datetime-local"
+                    value={
+                      quiz?.visibleFrom ? toLocalInput(quiz.visibleFrom) : ""
+                    }
+                    onChange={(e) =>
+                      setQuiz((q) => ({
+                        ...q,
+                        visibleFrom: e.target.value || "",
+                      }))
+                    }
+                    disabled={visibleImmediate}
+                    className="w-full border border-gray-300 rounded-md px-2 py-1"
+                  />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={visibleImmediate}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setVisibleImmediate(checked);
+                        if (checked)
+                          setQuiz((q) => ({ ...q, visibleFrom: "" }));
+                      }}
+                    />
+                    <span>Immediate</span>
+                  </label>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-black">
                   Start From (when students may start the quiz)
                 </label>
-                <input
-                  type="datetime-local"
-                  value={
-                    quiz?.startFrom
-                      ? new Date(quiz.startFrom).toISOString().slice(0, 16)
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setQuiz((q) => ({ ...q, startFrom: e.target.value || "" }))
-                  }
-                  className="w-full border border-gray-300 rounded-md px-2 py-1"
-                />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="datetime-local"
+                    value={quiz?.startFrom ? toLocalInput(quiz.startFrom) : ""}
+                    onChange={(e) =>
+                      setQuiz((q) => ({
+                        ...q,
+                        startFrom: e.target.value || "",
+                      }))
+                    }
+                    disabled={startImmediate}
+                    className="w-full border border-gray-300 rounded-md px-2 py-1"
+                  />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={startImmediate}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setStartImmediate(checked);
+                        if (checked) setQuiz((q) => ({ ...q, startFrom: "" }));
+                      }}
+                    />
+                    <span>Immediate</span>
+                  </label>
+                </div>
               </div>
             </div>
 
