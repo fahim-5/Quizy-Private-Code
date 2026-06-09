@@ -172,6 +172,9 @@ const Navbar = () => {
         user.role === "teacher" ? "/dashboard/teacher" : "/dashboard/student",
     });
     if (user.role === "teacher") {
+      navigation.push({ name: "My Quizzes", href: "/teacher/quizzes" });
+    }
+    if (user.role === "teacher") {
       navigation.push({ name: "My Courses", href: "/teacher/courses" });
     }
     if (user.role === "student") {

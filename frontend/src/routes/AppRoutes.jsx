@@ -10,6 +10,7 @@ import TakeQuiz from "../pages/TakeQuiz";
 import Join from "../pages/Join";
 import Result from "../pages/Result";
 import AdminPanel from "../pages/AdminPanel";
+import TeacherQuizzes from "../pages/TeacherQuizzes";
 import Courses from "../pages/Courses";
 import CourseDetail from "../pages/CourseDetail";
 import ManageQuestions from "../pages/ManageQuestions";
@@ -46,6 +47,7 @@ export default function AppRoutes() {
       <Route path="/result" element={<Result />} />
       <Route path="/results" element={<ResultsHistory />} />
       <Route path="/teacher" element={<AdminPanel />} />
+      <Route path="/teacher/quizzes" element={<TeacherQuizzes />} />
       <Route path="/courses" element={<Courses />} />
       <Route path="/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/courses" element={<Courses />} />

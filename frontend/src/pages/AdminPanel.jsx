@@ -31,9 +31,11 @@ export default function AdminPanel() {
     setError(null);
 
     try {
-      // Try fetching users, quizzes, results counts. Teachers request all quizzes via ?all=true.
+      // Teachers should request only their quizzes (mine=true). Fall back to server filtering.
       const quizzesUrl =
-        user && user.role === "teacher" ? "/quizzes?all=true" : "/quizzes";
+        user && user.role === "teacher"
+          ? "/quizzes?all=true&mine=true"
+          : "/quizzes";
       const [usersRes, quizzesRes, resultsRes] = await Promise.allSettled([
         api.get("/users"),
         api.get(quizzesUrl),
@@ -53,8 +55,17 @@ export default function AdminPanel() {
         const list = Array.isArray(data)
           ? data
           : data?.quizzes || data?.results || [];
-        setQuizzes(list);
-        setStats((s) => ({ ...s, quizzes: list.length }));
+        // Ensure teacher only sees their own quizzes client-side as a safety net
+        const filtered =
+          user && user.role === "teacher"
+            ? list.filter(
+                (q) =>
+                  String(q.createdBy?._id || q.createdBy || "") ===
+                  String(user._id),
+              )
+            : list;
+        setQuizzes(filtered);
+        setStats((s) => ({ ...s, quizzes: filtered.length }));
       }
 
       if (resultsRes.status === "fulfilled") {

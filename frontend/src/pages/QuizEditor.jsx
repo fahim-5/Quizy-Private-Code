@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import api from "../services/api";
+import { AuthContext } from "../context/AuthContext";
 
 export default function QuizEditor() {
   const navigate = useNavigate();
@@ -26,6 +27,8 @@ export default function QuizEditor() {
         },
   );
 
+  const { user, token } = useContext(AuthContext);
+
   useEffect(() => {
     if (existingId) {
       fetchQuiz(existingId);
@@ -33,7 +36,15 @@ export default function QuizEditor() {
     // fetch available subjects for assignment
     (async () => {
       try {
-        const res = await api.get("/subjects");
+        // If current user is a teacher, only fetch their subjects to prevent assigning quizzes to other teachers' courses
+        const url =
+          user && user.role === "teacher"
+            ? `/subjects?teacherId=${user._id}`
+            : "/subjects";
+        const res = await api.get(
+          url,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+        );
         setSubjects(res.data.subjects || []);
       } catch (e) {
         setSubjects([]);

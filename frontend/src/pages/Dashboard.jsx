@@ -37,8 +37,9 @@ export default function Dashboard() {
               ? { headers: { Authorization: `Bearer ${token}` } }
               : undefined,
           ),
+          // fetch only subjects/courses owned by this teacher
           api.get(
-            "/subjects",
+            `/subjects?teacherId=${user._id}`,
             token
               ? { headers: { Authorization: `Bearer ${token}` } }
               : undefined,
@@ -109,6 +110,19 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // If someone who is not a teacher visits /dashboard/teacher, redirect them
+  useEffect(() => {
+    if (
+      location?.pathname &&
+      location.pathname.startsWith("/dashboard/teacher") &&
+      user &&
+      user.role !== "teacher"
+    ) {
+      navigate("/dashboard");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.pathname, user]);
+
   // Re-fetch when the route changes back to the dashboard (fixes missing courses after navigation)
   useEffect(() => {
     if (location?.pathname && location.pathname.startsWith("/dashboard")) {
@@ -166,6 +180,54 @@ export default function Dashboard() {
         {user && user.role === "teacher" ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
+              <section className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Your Courses</h2>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => navigate("/teacher/courses")}
+                      className="text-sm text-gray-600"
+                    >
+                      View all
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {subjects.length === 0 && (
+                    <div className="col-span-full p-6 bg-white rounded shadow">
+                      No courses available yet.
+                    </div>
+                  )}
+
+                  {subjects
+                    .filter(
+                      (s) =>
+                        // guard for ownership — backend returns only teacher's subjects when queried with teacherId
+                        s &&
+                        (s.createdBy?._id === user._id ||
+                          s.createdBy === user._id),
+                    )
+                    .slice(0, 3)
+                    .map((s) => (
+                      <div key={s._id} className="p-4 bg-white rounded shadow">
+                        <h3 className="font-semibold text-black">{s.name}</h3>
+                        <p className="text-sm text-gray-600">{s.code}</p>
+                        <div className="mt-3">
+                          <button
+                            onClick={() =>
+                              navigate(`/teacher/courses/${s._id}`)
+                            }
+                            className="px-3 py-1 bg-black text-white rounded-md"
+                          >
+                            Manage Course
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </section>
+
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">Your Quizzes</h2>

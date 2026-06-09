@@ -39,9 +39,13 @@ export default function CourseDetail() {
 
         // If enrolled (or teacher), load quizzes
         if (enrolled || (user && user.role === "teacher")) {
+          // Teachers should see only their quizzes for this course by default.
           // Only include the `mine=true` filter when we have an authenticated user,
           // otherwise the server will return 401 for that query parameter.
-          const mineParam = showOnlyMine && user ? "&mine=true" : "";
+          const mineParam =
+            (showOnlyMine || (user && user.role === "teacher")) && user
+              ? "&mine=true"
+              : "";
           const quizUrl = `/quizzes?subject=${id}&all=true${mineParam}`;
           const qRes = await api.get(
             quizUrl,
