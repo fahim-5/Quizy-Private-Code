@@ -303,7 +303,7 @@ export default function QuizEditor() {
                 </label>
                 <input
                   type="number"
-                  value={quiz?.timeLimit ? Math.round(quiz.timeLimit / 60) : 0}
+                  value={quiz?.timeLimit || 0}
                   onChange={(e) =>
                     setQuiz((q) => ({
                       ...q,
