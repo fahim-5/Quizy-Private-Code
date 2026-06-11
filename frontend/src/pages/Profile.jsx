@@ -10,6 +10,7 @@ import {
   FaUserShield,
   FaSignOutAlt,
 } from "react-icons/fa";
+import Avatar from "../components/Avatar";
 
 import api from "../services/api";
 import { AuthContext } from "../context/AuthContext";
@@ -124,10 +125,10 @@ export default function Profile() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Profile</h1>
 
             <p className="text-gray-500 mt-1 text-sm">
-              View and manage your account information.
+              Your account information.
             </p>
           </div>
 
@@ -138,14 +139,6 @@ export default function Profile() {
             >
               <FaArrowLeft size={13} />
               Back
-            </button>
-
-            <button
-              onClick={() => logout && logout()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition"
-            >
-              <FaSignOutAlt size={13} />
-              Logout
             </button>
           </div>
         </div>
@@ -159,8 +152,13 @@ export default function Profile() {
             {/* User Info */}
             <div className="-mt-12 flex flex-col md:flex-row md:items-center gap-5">
               {/* Avatar */}
-              <div className="w-24 h-24 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-3xl font-bold border-4 border-white shadow-sm">
-                {(profile.name || profile.identifier || "U")[0].toUpperCase()}
+              <div>
+                <Avatar
+                  user={profile}
+                  size="w-24 h-24"
+                  iconSize="h-12 w-12"
+                  className="border-4 border-white shadow-sm"
+                />
               </div>
 
               <div className="flex-1">
@@ -194,11 +192,11 @@ export default function Profile() {
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-semibold text-gray-800">
+                    <h2 className="text-4xl md:text-5xl mb-2 font-extrabold text-gray-800 leading-tight">
                       {profile.name || profile.identifier}
                     </h2>
 
-                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+                    <div className="flex flex-wrap  items-center gap-4 mt-2 text-sm text-gray-500">
                       <div className="flex items-center gap-2">
                         <FaEnvelope />
                         {profile.email}
@@ -308,19 +306,9 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions (edit only) */}
             <div className="flex flex-wrap gap-4 mt-8">
-              {!isEditing ? (
-                <>
-                  <button
-                    onClick={startEdit}
-                    className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-100 transition"
-                  >
-                    <FaIdBadge />
-                    Edit Profile
-                  </button>
-                </>
-              ) : (
+              {isEditing && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleSave}
@@ -339,21 +327,6 @@ export default function Profile() {
                   </button>
                 </div>
               )}
-              <button
-                onClick={() => navigate(`/teacher`)}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gray-800 text-white hover:bg-gray-700 transition"
-              >
-                <FaChalkboardTeacher />
-                Manage Quizzes
-              </button>
-
-              <button
-                onClick={() => navigate(`/teacher/courses`)}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-100 transition"
-              >
-                <FaBook />
-                My Courses
-              </button>
             </div>
           </div>
         </div>

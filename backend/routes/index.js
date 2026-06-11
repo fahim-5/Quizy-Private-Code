@@ -6,6 +6,7 @@ import quizRoutes from "./quizRoutes.js";
 import subjectRoutes from "./subjectRoutes.js";
 import questionRoutes from "./questionRoutes.js";
 import resultRoutes from "./resultRoutes.js";
+import devRoutes from "./devRoutes.js";
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.use("/quizzes", quizRoutes);
 router.use("/subjects", subjectRoutes);
 router.use("/questions", questionRoutes);
 router.use("/results", resultRoutes);
+router.use("/dev", devRoutes);
 
 // Health check route (directly in index.js instead of separate file)
 router.get("/health", async (req, res) => {

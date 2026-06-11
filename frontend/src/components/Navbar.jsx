@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/images/logo.png";
 import useAuth from "../hooks/useAuth";
 import api from "../services/api";
+import Avatar from "./Avatar";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth() || {};
+  const { user, logout, token } = useAuth() || {};
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [quizzesCache, setQuizzesCache] = useState([]);
@@ -27,8 +28,18 @@ const Navbar = () => {
       if (!user || user.role !== "teacher") return;
       try {
         const [qRes, sRes] = await Promise.allSettled([
-          api.get("/quizzes?all=true"),
-          api.get("/subjects"),
+          api.get(
+            "/quizzes?all=true",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
+          api.get(
+            "/subjects",
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          ),
         ]);
         if (!mounted) return;
         const quizzes =
@@ -115,8 +126,14 @@ const Navbar = () => {
           : `/quizzes?search=${encodeURIComponent(q)}`;
       const subjectUrl = `/subjects?search=${encodeURIComponent(q)}`;
       const [sRes, qRes] = await Promise.allSettled([
-        api.get(subjectUrl),
-        api.get(quizUrl),
+        api.get(
+          subjectUrl,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+        ),
+        api.get(
+          quizUrl,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+        ),
       ]);
 
       const subjects =
@@ -149,12 +166,20 @@ const Navbar = () => {
   // show navigation items only for authenticated users
   const navigation = [];
   if (user) {
-    navigation.push({ name: "Dashboard", href: "/dashboard" });
+    navigation.push({
+      name: "Dashboard",
+      href:
+        user.role === "teacher" ? "/dashboard/teacher" : "/dashboard/student",
+    });
     if (user.role === "teacher") {
-      navigation.push({ name: "Your Courses", href: "/teacher/courses" });
+      navigation.push({ name: "My Quizzes", href: "/teacher/quizzes" });
+    }
+    if (user.role === "teacher") {
+      navigation.push({ name: "My Courses", href: "/teacher/courses" });
     }
     if (user.role === "student") {
-      navigation.push({ name: "Your Courses", href: "/courses?enrolled=true" });
+      navigation.push({ name: "My Courses", href: "/courses?enrolled=true" });
+      navigation.push({ name: "All Courses", href: "/courses" });
     }
   }
 
@@ -164,7 +189,15 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate(user ? "/dashboard" : "/login")}
+              onClick={() =>
+                navigate(
+                  user
+                    ? user.role === "teacher"
+                      ? "/dashboard/teacher"
+                      : "/dashboard/student"
+                    : "/login",
+                )
+              }
               className="flex-shrink-0 flex items-center"
               aria-label="Home"
             >
@@ -249,19 +282,35 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`${
-                  location.pathname === item.href
-                    ? "text-black border-b-2 border-black"
-                    : "text-black hover:text-gray-600"
-                } px-3 py-2 text-sm font-medium transition-colors duration-200`}
-              >
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const hasQuery = item.href && item.href.includes("?");
+              const toProp = hasQuery
+                ? {
+                    pathname: item.href.split("?")[0],
+                    search: `?${item.href.split("?")[1]}`,
+                  }
+                : item.href;
+              const isActive = hasQuery
+                ? location.pathname === toProp.pathname &&
+                  location.search === toProp.search
+                : location.pathname ===
+                    (typeof toProp === "string" ? toProp : toProp.pathname) &&
+                  location.search === "";
+
+              return (
+                <Link
+                  key={item.name}
+                  to={toProp}
+                  className={`${
+                    isActive
+                      ? "text-black border-b-2 border-black"
+                      : "text-black hover:text-gray-600"
+                  } px-3 py-2 text-sm font-medium transition-colors duration-200`}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
 
             {!user ? (
               <div className="flex items-center space-x-2">
@@ -290,39 +339,8 @@ const Navbar = () => {
                   aria-haspopup="true"
                   aria-expanded={userMenuOpen}
                 >
-                  <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center text-white">
-                    {user && user.role === "teacher" ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" />
-                        <path d="M3 20c0-3.866 4.477-7 9-7s9 3.134 9 7" />
-                        <rect x="16" y="14" width="5" height="3" rx="0.5" />
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 2l9 4.5-9 4.5-9-4.5L12 2z" />
-                        <path d="M12 11.5v6.5" />
-                      </svg>
-                    )}
+                  <div>
+                    <Avatar user={user} size="h-8 w-8" iconSize="h-5 w-5" />
                   </div>
                   <span className="text-sm text-black">
                     {user.name || "User"}
@@ -395,20 +413,36 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden" ref={mobileMenuRef}>
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`${
-                    location.pathname === item.href
-                      ? "bg-gray-100 text-black"
-                      : "text-black hover:bg-gray-50 hover:text-gray-600"
-                  } block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const hasQuery = item.href && item.href.includes("?");
+                const toProp = hasQuery
+                  ? {
+                      pathname: item.href.split("?")[0],
+                      search: `?${item.href.split("?")[1]}`,
+                    }
+                  : item.href;
+                const isActive = hasQuery
+                  ? location.pathname === toProp.pathname &&
+                    location.search === toProp.search
+                  : location.pathname ===
+                      (typeof toProp === "string" ? toProp : toProp.pathname) &&
+                    location.search === "";
+
+                return (
+                  <Link
+                    key={item.name}
+                    to={toProp}
+                    onClick={() => setIsOpen(false)}
+                    className={`${
+                      isActive
+                        ? "bg-gray-100 text-black"
+                        : "text-black hover:bg-gray-50 hover:text-gray-600"
+                    } block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
 
               <div className="mt-2 border-t pt-2">
                 {!user ? (
@@ -435,7 +469,11 @@ const Navbar = () => {
                 ) : (
                   <>
                     <Link
-                      to="/dashboard"
+                      to={
+                        user.role === "teacher"
+                          ? "/dashboard/teacher"
+                          : "/dashboard/student"
+                      }
                       onClick={() => setIsOpen(false)}
                       className="block px-3 py-2 text-base text-black"
                     >

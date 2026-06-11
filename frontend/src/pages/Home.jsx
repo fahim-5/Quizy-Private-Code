@@ -9,6 +9,7 @@ import studentImg from "../assets/images/Student.png";
 const Home = () => {
   const auth = useAuth();
   const user = auth?.user || null;
+  const token = auth?.token || null;
   const navigate = useNavigate();
 
   const [quizzes, setQuizzes] = useState([]);
@@ -29,7 +30,12 @@ const Home = () => {
         // if teacher, also fetch subjects (courses)
         if (user && user.role === "teacher") {
           try {
-            const sres = await api.get("/subjects?mine=true");
+            const sres = await api.get(
+              "/subjects?mine=true",
+              token
+                ? { headers: { Authorization: `Bearer ${token}` } }
+                : undefined,
+            );
             setSubjects(sres.data.subjects || []);
           } catch (e) {
             setSubjects([]);
@@ -229,7 +235,13 @@ const Home = () => {
                           code: subjectCode.trim(),
                           enrollKey: enrollKey.trim(),
                         };
-                        await api.post("/subjects", payload);
+                        await api.post(
+                          "/subjects",
+                          payload,
+                          token
+                            ? { headers: { Authorization: `Bearer ${token}` } }
+                            : undefined,
+                        );
                         alert("Subject added");
                         setShowAddSubject(false);
                         setSubjectName("");

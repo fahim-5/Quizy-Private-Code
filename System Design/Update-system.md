@@ -69,6 +69,40 @@ These changes ensure real-world behaviour: students from different institutions 
 
 ---
 
+## Recent UI Updates — Profile & Settings (May 2026)
+
+Summary: small but important UX improvements were implemented to the Profile and Settings pages to simplify the interface and increase security when changing sensitive information.
+
+- **Profile page**
+  - Replaced the old inline avatar with a shared `Avatar` component used across the app (Navbar and Profile) so visuals are consistent.
+  - Enlarged the displayed user name for stronger visual hierarchy (`text-4xl` / `text-5xl` on larger screens).
+  - Removed non-essential action buttons from the profile card: **Edit Profile**, **Manage Quizzes**, and **My Courses** were removed from the main actions area to reduce clutter. The edit workflow is still available via the Save/Cancel controls when the user enters edit mode.
+
+- **Settings page**
+  - Consolidated actions into a single **Save Update** button. The separate inline "Change password" button was removed.
+  - If the user changes their email or requests a password change, the system now requires verification via a 6‑digit code sent to the (new) email before committing changes — matching the registration verification pattern. This prevents unauthorized email changes and ensures the email is valid.
+  - A verification modal prompts for the 6‑digit code; after successful verification the backend applies the password change (if requested) and then updates profile fields.
+  - The verification flow reuses the existing email/code pattern and endpoints (server sends a code, user verifies it, then update is applied).
+
+Backend & Frontend artifacts changed for this flow:
+
+- Backend
+  - `User` model: added `passwordResetCode` and `passwordResetExpires` fields to store the 6‑digit code (hashed) and expiry.
+  - `authController`: added endpoints to request a reset code (`POST /api/auth/forgot-password`), verify a code (`POST /api/auth/verify-reset`), and reset password (`POST /api/auth/reset-password`). These are the same primitives used for registration verification.
+  - Temporary: added debug logging to `middleware/auth.js`'s `protect` middleware to assist with token/401 diagnostics during development.
+
+- Frontend
+  - Added `frontend/src/pages/Forgot.jsx` — a small three-step UI for requesting a reset code, verifying it, and updating the password (reusable by the Settings flow).
+  - Added `frontend/src/components/Avatar.jsx` — reusable avatar component used by `Navbar.jsx` and `Profile.jsx` to keep visuals consistent.
+  - Updated `frontend/src/pages/Profile.jsx` — uses `Avatar` and shows larger username; removed the extra action buttons and left only Save/Cancel in edit mode.
+  - Updated `frontend/src/pages/Settings.jsx` — single `Save Update` flow; verification modal shown when email/password changed; applies change only after successful code verification.
+
+Notes & developer checklist
+
+- Ensure email SMTP env vars are configured (`EMAIL_HOST`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`) so verification codes are delivered during testing.
+- The code is hashed in the DB and expires in 15 minutes to keep the flow secure.
+- The Settings flow intentionally reuses the reset/verification primitives to minimize backend surface area and keep behaviour consistent with registration.
+
 ## 2. TEACHER SIDE — Full Control Panel
 
 ### 2.1 Teacher Dashboard (After Login)

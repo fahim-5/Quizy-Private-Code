@@ -151,11 +151,7 @@ const getQuizzes = async (req, res, next) => {
       // If caller wants all quizzes for this subject (e.g., teacher viewing their course)
       if (req.query.all === "true") {
         const filter = { subject: subjId };
-        if (req.query.mine === "true") {
-          if (!req.user)
-            return res
-              .status(401)
-              .json({ success: false, message: "Not authenticated" });
+        if (req.query.mine === "true" && req.user) {
           filter.createdBy = req.user.id;
         }
         const quizzes = await Quiz.find(filter)
@@ -174,11 +170,7 @@ const getQuizzes = async (req, res, next) => {
           { visibleFrom: { $lte: now } },
         ],
       };
-      if (req.query.mine === "true") {
-        if (!req.user)
-          return res
-            .status(401)
-            .json({ success: false, message: "Not authenticated" });
+      if (req.query.mine === "true" && req.user) {
         match.createdBy = req.user.id;
       }
       const quizzes = await Quiz.find(match)
@@ -210,11 +202,7 @@ const getQuizzes = async (req, res, next) => {
             { createdBy: { $in: userIds } },
           ],
         };
-        if (req.query.mine === "true") {
-          if (!req.user)
-            return res
-              .status(401)
-              .json({ success: false, message: "Not authenticated" });
+        if (req.query.mine === "true" && req.user) {
           base.createdBy = req.user.id;
         }
         const quizzes = await Quiz.find(base)
@@ -223,11 +211,7 @@ const getQuizzes = async (req, res, next) => {
         return res.json({ success: true, quizzes });
       }
       const base = {};
-      if (req.query.mine === "true") {
-        if (!req.user)
-          return res
-            .status(401)
-            .json({ success: false, message: "Not authenticated" });
+      if (req.query.mine === "true" && req.user) {
         base.createdBy = req.user.id;
       }
       const quizzes = await Quiz.find(base)
@@ -292,11 +276,7 @@ const getQuizzes = async (req, res, next) => {
           { visibleFrom: { $lte: now } },
         ],
       };
-      if (req.query.mine === "true") {
-        if (!req.user)
-          return res
-            .status(401)
-            .json({ success: false, message: "Not authenticated" });
+      if (req.query.mine === "true" && req.user) {
         match.createdBy = req.user.id;
       }
       const quizzes = await Quiz.find({
@@ -321,11 +301,7 @@ const getQuizzes = async (req, res, next) => {
         { visibleFrom: { $lte: now } },
       ],
     };
-    if (req.query.mine === "true") {
-      if (!req.user)
-        return res
-          .status(401)
-          .json({ success: false, message: "Not authenticated" });
+    if (req.query.mine === "true" && req.user) {
       baseMatch.createdBy = req.user.id;
     }
     const quizzes = await Quiz.find(baseMatch)

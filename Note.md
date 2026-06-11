@@ -3,7 +3,7 @@ Rifa: ( FrontEnd Student)
 2. Dasboard.jsx
 3. Courses.jsx
 4. frontend\src\components\Navbar.jsx
-5. 
+5. frontend\src\pages\Forgot.jsx
 6. 
 7. 
 8. 
@@ -26,8 +26,8 @@ Marufa :(Routes + API)
 1. AppRoutes.jsx
 2. backend\routes\subjectRoutes.js
 3. backend\models\User.js
-4. 
-5. 
+4. backend\utils\email.js
+5. backend\utils\emailTemplates
 6. 
 7. 
 8. 

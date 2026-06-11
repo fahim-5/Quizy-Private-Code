@@ -1,5 +1,7 @@
 import Subject from "../models/Subject.js";
 import User from "../models/User.js";
+import Quiz from "../models/Quiz.js";
+import Question from "../models/Question.js";
 import AppError from "../utils/appError.js";
 
 const createSubject = async (req, res, next) => {
@@ -58,7 +60,7 @@ const getSubjects = async (req, res, next) => {
       })
         .limit(200)
         .sort({ createdAt: -1 })
-        .populate("createdBy", "name identifier");
+        .populate("createdBy", "name identifier institution email");
       return res.json({ success: true, subjects });
     }
 
@@ -85,7 +87,7 @@ const getSubjects = async (req, res, next) => {
     let subjects = await Subject.find(query)
       .limit(200)
       .sort({ createdAt: -1 })
-      .populate("createdBy", "name identifier")
+      .populate("createdBy", "name identifier institution email")
       .populate("enrolledUsers", "_id");
 
     // If a user is present (optional auth), annotate subjects with isEnrolled boolean
@@ -110,7 +112,7 @@ const getSubjects = async (req, res, next) => {
 const getSubject = async (req, res, next) => {
   try {
     const subject = await Subject.findById(req.params.id)
-      .populate("createdBy", "name identifier")
+      .populate("createdBy", "name identifier institution email")
       .populate("enrolledUsers", "_id name");
     if (!subject)
       return res.status(404).json({ success: false, message: "Not found" });
@@ -169,4 +171,43 @@ const enrollSubject = async (req, res, next) => {
   }
 };
 
-export default { createSubject, getSubjects, getSubject, enrollSubject };
+const deleteSubject = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const subject = await Subject.findById(id);
+    if (!subject)
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
+
+    // only the creator may delete
+    if (!req.user || String(subject.createdBy) !== String(req.user._id)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden: not the owner" });
+    }
+
+    // delete quizzes and related questions, then remove the subject
+    const quizzes = await Quiz.find({ subject: id }).select("_id");
+    const quizIds = quizzes.map((q) => q._id);
+
+    if (quizIds.length > 0) {
+      await Question.deleteMany({ quiz: { $in: quizIds } });
+      await Quiz.deleteMany({ _id: { $in: quizIds } });
+    }
+
+    await Subject.findByIdAndDelete(id);
+
+    res.json({ success: true, message: "Course and related quizzes removed" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export default {
+  createSubject,
+  getSubjects,
+  getSubject,
+  enrollSubject,
+  deleteSubject,
+};

@@ -9,14 +9,16 @@ export default function CourseDetail() {
   const [subject, setSubject] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollKeyInput, setEnrollKeyInput] = useState("");
-  const { user } = useAuth() || {};
+  const { user, token } = useAuth() || {};
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const initialMine =
-    params.get("mine") === "true" || (user && user.role === "teacher");
+  // Default to the `mine` query param only. Do not force teachers to see only
+  // their quizzes by default; allow them to toggle the checkbox if desired.
+  const initialMine = params.get("mine") === "true";
   const [showOnlyMine, setShowOnlyMine] = useState(initialMine);
 
   useEffect(() => {
@@ -25,7 +27,10 @@ export default function CourseDetail() {
       setLoading(true);
       try {
         // first fetch subject (returns isEnrolled when logged in)
-        const sRes = await api.get(`/subjects/${id}`);
+        const sRes = await api.get(
+          `/subjects/${id}`,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+        );
         if (!mounted) return;
         const subj = sRes?.data?.subject;
         const enrolled = !!sRes?.data?.isEnrolled;
@@ -34,14 +39,32 @@ export default function CourseDetail() {
 
         // If enrolled (or teacher), load quizzes
         if (enrolled || (user && user.role === "teacher")) {
-          const quizUrl = `/quizzes?subject=${id}&all=true${showOnlyMine ? "&mine=true" : ""}`;
-          const qRes = await api.get(quizUrl);
+          // Teachers should see only their quizzes for this course by default.
+          // Only include the `mine=true` filter when we have an authenticated user,
+          // otherwise the server will return 401 for that query parameter.
+          const mineParam =
+            (showOnlyMine || (user && user.role === "teacher")) && user
+              ? "&mine=true"
+              : "";
+          const quizUrl = `/quizzes?subject=${id}&all=true${mineParam}`;
+          const qRes = await api.get(
+            quizUrl,
+            token
+              ? { headers: { Authorization: `Bearer ${token}` } }
+              : undefined,
+          );
           setQuizzes(qRes.data.quizzes || qRes.data || []);
         } else {
           setQuizzes([]);
         }
       } catch (err) {
-        setError("Failed to load course data");
+        console.error("CourseDetail fetch error:", err);
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load course data";
+        const status = err?.response?.status;
+        setError(status ? `${msg} (status: ${status})` : msg);
       } finally {
         setLoading(false);
       }
@@ -64,30 +87,84 @@ export default function CourseDetail() {
           <div className="text-sm text-gray-600">Code: {subject.code}</div>
         </div>
         <div className="flex items-center gap-4">
-          {user && user.role === "teacher" && (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={showOnlyMine}
-                onChange={(e) => setShowOnlyMine(e.target.checked)}
-              />
-              <span>Show only my quizzes</span>
-            </label>
+          {user && user.role === "teacher" ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  navigate(`/teacher/create?subject=${subject._id}`)
+                }
+                className="bg-black text-white px-4 py-2 rounded-md"
+              >
+                Add Quiz
+              </button>
+              <button
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      "Delete this course? This action cannot be undone.",
+                    )
+                  )
+                    return;
+                  setDeleting(true);
+                  try {
+                    await api.delete(
+                      `/subjects/${subject._id}`,
+                      token
+                        ? { headers: { Authorization: `Bearer ${token}` } }
+                        : undefined,
+                    );
+                    navigate("/teacher/courses");
+                  } catch (err) {
+                    setError(
+                      err?.response?.data?.message ||
+                        err?.message ||
+                        "Delete failed",
+                    );
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-md"
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Course"}
+              </button>
+              <button
+                onClick={() => navigate("/teacher")}
+                className="border px-4 py-2 rounded-md"
+              >
+                Back
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="text-left">
+                <div className="text-xl md:text-2xl font-extrabold text-gray-900">
+                  {subject.createdBy?.name ||
+                    subject.createdBy?.identifier ||
+                    "—"}
+                </div>
+                <div className="text-lg md:text-xl text-gray-700">
+                  {subject.createdBy?.institution || ""}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const email = subject.createdBy?.email;
+                  if (email) window.location.href = `mailto:${email}`;
+                }}
+                className="px-4 py-2 bg-black text-white rounded-md"
+              >
+                Contact
+              </button>
+              <button
+                onClick={() => navigate(-1)}
+                className="border px-4 py-2 rounded-md"
+              >
+                Back
+              </button>
+            </div>
           )}
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate(`/teacher/create?subject=${subject._id}`)}
-              className="bg-black text-white px-4 py-2 rounded-md"
-            >
-              Add Quiz
-            </button>
-            <button
-              onClick={() => navigate("/teacher")}
-              className="border px-4 py-2 rounded-md"
-            >
-              Back
-            </button>
-          </div>
         </div>
       </div>
 
@@ -111,12 +188,19 @@ export default function CourseDetail() {
                 onClick={async () => {
                   setLoading(true);
                   try {
-                    await api.post(`/subjects/${subject._id}/enroll`, {
-                      enrollKey: enrollKeyInput,
-                    });
+                    await api.post(
+                      `/subjects/${subject._id}/enroll`,
+                      { enrollKey: enrollKeyInput },
+                      token
+                        ? { headers: { Authorization: `Bearer ${token}` } }
+                        : undefined,
+                    );
                     // reload quizzes
                     const qRes = await api.get(
                       `/quizzes?subject=${id}&all=true${showOnlyMine ? "&mine=true" : ""}`,
+                      token
+                        ? { headers: { Authorization: `Bearer ${token}` } }
+                        : undefined,
                     );
                     setQuizzes(qRes.data.quizzes || qRes.data || []);
                     setIsEnrolled(true);
