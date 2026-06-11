@@ -54,13 +54,8 @@ export default function TakeQuiz() {
       if (guestName) payload.guestName = guestName;
       const res = await api.post("/results", payload);
       const result = res.data.result || res.data;
-      navigate("/result", {
-        state: {
-          score: result.score,
-          total: result.total,
-          resultId: result._id,
-        },
-      });
+      // Pass full result object so the Result page can render immediately
+      navigate("/result", { state: { result } });
     } catch (err) {
       console.error(err);
     }
@@ -150,6 +145,22 @@ export default function TakeQuiz() {
       }
     } catch (err) {
       console.error("Failed to create draft result:", err);
+      const status = err?.response?.status;
+      // If server indicates quiz already taken, navigate to view the existing result
+      if (status === 409 && err?.response?.data?.result) {
+        const existing = err.response.data.result;
+        // try to fetch populated result then navigate
+        try {
+          const r = await api.get(`/results/${existing._id}`);
+          const full = r?.data?.result || r?.data;
+          navigate("/result", { state: { result: full } });
+          return;
+        } catch (e) {
+          navigate("/result", { state: { result: existing } });
+          return;
+        }
+      }
+
       const msg =
         err?.response?.data?.message || err.message || "Cannot start quiz";
       setError(msg);

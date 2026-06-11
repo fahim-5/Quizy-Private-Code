@@ -68,6 +68,20 @@ export default function StudentLobby() {
         const draft = sres?.data?.result || sres?.data;
         navigate(`/quiz/${quiz._id}`, { state: { resultId: draft?._id } });
       } catch (e) {
+        // If server indicates quiz already taken, redirect to result view
+        const status = e?.response?.status;
+        if (status === 409 && e?.response?.data?.result) {
+          const existing = e.response.data.result;
+          try {
+            const r = await api.get(`/results/${existing._id}`);
+            const full = r?.data?.result || r?.data;
+            navigate("/result", { state: { result: full } });
+            return;
+          } catch (er) {
+            navigate("/result", { state: { result: existing } });
+            return;
+          }
+        }
         // fallback: still navigate if draft creation fails
         navigate(`/quiz/${quiz._id}`);
       }

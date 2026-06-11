@@ -8,6 +8,7 @@ export default function CourseDetail() {
   const navigate = useNavigate();
   const [subject, setSubject] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
+  const [takenResults, setTakenResults] = useState({});
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
@@ -54,6 +55,24 @@ export default function CourseDetail() {
               : undefined,
           );
           setQuizzes(qRes.data.quizzes || qRes.data || []);
+          // if user is present, also fetch their completed results to detect taken quizzes
+          if (user) {
+            try {
+              const rRes = await api.get(`/results/me`);
+              const list = rRes?.data?.results || [];
+              const map = {};
+              list.forEach((r) => {
+                const raw = r.quiz && (r.quiz._id || r.quiz);
+                const qid = raw ? String(raw) : null;
+                if (qid && r.status === "completed") {
+                  map[qid] = r; // store latest completed result for this quiz
+                }
+              });
+              setTakenResults(map);
+            } catch (e) {
+              // ignore
+            }
+          }
         } else {
           setQuizzes([]);
         }
@@ -286,6 +305,30 @@ export default function CourseDetail() {
                                   Monitor
                                 </button>
                               </>
+                            ) : takenResults[String(q._id)] ? (
+                              <button
+                                onClick={async () => {
+                                  // fetch populated result then navigate to view
+                                  const existing = takenResults[String(q._id)];
+                                  const rid =
+                                    existing && (existing._id || existing.id);
+                                  try {
+                                    const r = await api.get(`/results/${rid}`);
+                                    const full = r?.data?.result || r?.data;
+                                    navigate("/result", {
+                                      state: { result: full },
+                                    });
+                                  } catch (err) {
+                                    // fallback: navigate to results page with existing result
+                                    navigate("/result", {
+                                      state: { result: existing },
+                                    });
+                                  }
+                                }}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm"
+                              >
+                                See Result
+                              </button>
                             ) : (
                               <button
                                 onClick={() => navigate(`/take/${q._id}`)}

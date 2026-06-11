@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import api from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import logo from "../assets/images/logo.png";
@@ -19,28 +18,27 @@ export default function Login() {
     setError(null);
     setLoading(true);
     try {
-      const input = id.trim();
+      // Dev login: request backend to find-or-create a dev user so the DB
+      // has a matching user record (needed for enrollments and queries).
+      const input = id.trim() || "dev";
       const isEmail = /^\S+@\S+\.\S+$/.test(input);
       const payload = isEmail
-        ? { email: input.toLowerCase(), password }
-        : { id: input, password };
-      const res = await api.post("/auth/login", payload);
-
-      const token = res?.data?.token;
-      const user = res?.data?.data?.user;
-
-      if (token) {
-        localStorage.setItem("token", token);
+        ? { email: input.toLowerCase(), name: input }
+        : { id: input, name: input };
+      try {
+        const res = await (
+          await import("../services/api")
+        ).default.post("/auth/dev-login", payload);
+        const user = res?.data?.data?.user;
+        if (user && auth?.login) auth.login(user);
+        navigate(
+          user && user.role === "teacher"
+            ? "/dashboard/teacher"
+            : "/dashboard/student",
+        );
+      } catch (err) {
+        setError("Dev login failed");
       }
-      if (user && auth?.login) {
-        auth.login(user, token);
-      }
-
-      navigate(
-        user && user.role === "teacher"
-          ? "/dashboard/teacher"
-          : "/dashboard/student",
-      );
     } catch (err) {
       const status = err?.response?.status;
       if (status === 401) setError("Wrong password");

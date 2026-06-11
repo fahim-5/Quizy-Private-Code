@@ -13,14 +13,15 @@ import {
   getStudentReport,
   updateDraft,
   exportReportPDF,
+  getResultById,
 } from "../controllers/resultController.js";
-import { protect, authorize } from "../middleware/auth.js";
+import { protect, authorize, optionalAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // Allow guests to start and submit results (join by code) — authentication optional
-router.post("/start", startResult);
-router.post("/", submitResult);
+router.post("/start", optionalAuth, startResult);
+router.post("/", optionalAuth, submitResult);
 router.get("/user/:userId", protect, getResultsForUser);
 router.get("/me", protect, getMyResults);
 router.get("/me/summary", protect, getMySummary);
@@ -71,5 +72,8 @@ router.get(
 
 // Update draft answers (autosave) - user must be authenticated and owner
 router.put("/:id", protect, updateDraft);
+
+// fetch single result (populated)
+router.get("/:id", protect, getResultById);
 
 export default router;

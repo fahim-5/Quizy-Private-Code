@@ -1,94 +1,98 @@
-import jwt from "jsonwebtoken";
+// Development / teaching mode auth shim
+// This middleware bypasses JWT verification and ensures a real DB user
+// exists for dev purposes. It will find-or-create a `dev@local` user and
+// attach the actual DB document to `req.user` so ObjectId casts succeed.
 import User from "../models/User.js";
-import AppError from "../utils/appError.js";
+
+let _cachedDevUser = null;
 
 export const protect = async (req, res, next) => {
   try {
-    let token;
-
-    // Check for token in header
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
+    // If the frontend provided a dev header, use that user (student or teacher)
+    const uid = req.headers["x-user-id"] || req.headers["x-user-email"];
+    if (uid) {
+      let user = null;
+      if (typeof uid === "string" && /^[0-9a-fA-F]{24}$/.test(uid)) {
+        try {
+          user = await User.findById(uid);
+        } catch (e) {
+          user = null;
+        }
+      }
+      if (!user) {
+        try {
+          user = await User.findOne({ email: String(uid).toLowerCase() });
+        } catch (e) {
+          user = null;
+        }
+      }
+      if (user) {
+        req.user = user;
+        return next();
+      }
     }
 
-    if (!token) {
-      // Debug: log missing token and request path
-      try {
-        const present = !!req.headers.authorization;
-        console.warn(
-          `[auth.protect] Missing token for ${req.method} ${req.originalUrl} — Authorization header present: ${present}`,
-        );
-      } catch (e) {}
-      return next(new AppError("Not authorized to access this route", 401));
+    // Fallback: ensure a dev teacher exists and attach it
+    if (!_cachedDevUser) {
+      let u = await User.findOne({ email: "dev@local" });
+      if (!u) {
+        // Create a minimal dev user; password will be hashed by the model hook
+        u = await User.create({
+          name: "Dev User",
+          identifier: "dev",
+          email: "dev@local",
+          password: "devpass",
+          role: "teacher",
+          institution: "local",
+          isVerified: true,
+        });
+      }
+      _cachedDevUser = u;
     }
-
-    // Verify token (fall back to default secret if not configured)
-    const secret = process.env.JWT_SECRET || "dev-secret-change-me";
-    const decoded = jwt.verify(token, secret);
-
-    // Get user from token
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      try {
-        console.warn(
-          `[auth.protect] Token valid but user not found for ${req.method} ${req.originalUrl} (user id from token: ${decoded.id})`,
-        );
-      } catch (e) {}
-      return next(new AppError("User no longer exists", 401));
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    // Debug: log verification error and masked token
-    try {
-      const raw = req.headers.authorization || "";
-      const has = raw.startsWith("Bearer ");
-      const tok = has ? raw.split(" ")[1] : null;
-      const masked = tok ? `${tok.slice(0, 6)}...${tok.slice(-6)}` : null;
-      console.error(
-        `[auth.protect] Verification failed for ${req.method} ${req.originalUrl} — token present: ${!!tok} masked: ${masked} error: ${error.message}`,
-      );
-    } catch (e) {}
-    return next(new AppError("Not authorized to access this route", 401));
+    req.user = _cachedDevUser;
+    return next();
+  } catch (e) {
+    return next(e);
   }
 };
 
 export const authorize = (...roles) => {
-  // Simple role check — platform uses `student` and `teacher` roles
   return (req, res, next) => {
-    if (!req.user) {
-      return next(new AppError("Not authenticated", 401));
-    }
-    if (!roles.includes(req.user.role)) {
-      return next(new AppError("Not authorized to access this route", 403));
-    }
+    if (!req.user) return next(new Error("Not authenticated"));
+    if (!roles.includes(req.user.role))
+      return next(new Error("Not authorized"));
     next();
   };
 };
 
-// Optional authentication: if token provided, set req.user, otherwise continue anonymously
 export const optionalAuth = async (req, res, next) => {
   try {
-    let token;
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
-    if (!token) return next();
+    // Support a lightweight dev header to identify the current user from the frontend
+    const uid = req.headers["x-user-id"] || req.headers["x-user-email"];
+    if (!uid) return next();
 
-    const secret = process.env.JWT_SECRET || "dev-secret-change-me";
-    const decoded = jwt.verify(token, secret);
-    const user = await User.findById(decoded.id);
+    // If x-user-id looks like an ObjectId (24 hex) try by id first
+    let user = null;
+    if (typeof uid === "string" && /^[0-9a-fA-F]{24}$/.test(uid)) {
+      try {
+        user = await User.findById(uid);
+      } catch (e) {
+        user = null;
+      }
+    }
+
+    if (!user) {
+      // try by email
+      try {
+        user = await User.findOne({ email: String(uid).toLowerCase() });
+      } catch (e) {
+        user = null;
+      }
+    }
+
     if (user) req.user = user;
     return next();
-  } catch (error) {
-    // ignore token errors — proceed without user
+  } catch (e) {
     return next();
   }
 };
