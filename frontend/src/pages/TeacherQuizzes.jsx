@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api";
 import QuizzesTable from "../components/QuizzesTable";
-import TeacherAnalytics from "../components/AdminAnalytics";
 
 export default function TeacherQuizzes() {
   const { user, token } = useContext(AuthContext);
@@ -11,6 +10,8 @@ export default function TeacherQuizzes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     if (!user) return;
@@ -84,6 +85,17 @@ export default function TeacherQuizzes() {
   const handleMonitor = (q) => navigate(`/teacher/monitor/${q._id || q.id}`);
   const handleReport = (q) => navigate(`/teacher/reports/${q._id || q.id}`);
 
+  const filteredQuizzes = quizzes.filter((q) => {
+    if (filter === "draft") return q.status === "draft" || q.draft;
+    if (filter === "published")
+      return q.status === "published" || q.visibleFrom;
+    if (query && query.trim()) {
+      const t = (q.title || q.name || "").toLowerCase();
+      return t.includes(query.trim().toLowerCase());
+    }
+    return true;
+  });
+
   if (!user) return null;
   if (user.role !== "teacher") return <div className="p-6">Access denied</div>;
 
@@ -97,6 +109,23 @@ export default function TeacherQuizzes() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
+            <input
+              placeholder="Search quizzes..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="bg-transparent outline-none text-sm px-2 w-48"
+            />
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="text-sm bg-transparent outline-none"
+            >
+              <option value="all">All</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
           <button
             onClick={fetchQuizzes}
             className="border border-gray-300 text-black px-3 py-1 rounded-md mr-2 hover:bg-gray-100 transition-colors"
@@ -115,21 +144,16 @@ export default function TeacherQuizzes() {
       {loading && <p className="text-black">Loading quizzes...</p>}
       {error && <p className="text-red-600">{error}</p>}
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
-          <QuizzesTable
-            quizzes={quizzes}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onManage={handleManage}
-            onCopy={handleCopy}
-            onMonitor={handleMonitor}
-            onReport={handleReport}
-          />
-        </div>
-        <div>
-          <TeacherAnalytics />
-        </div>
+      <div>
+        <QuizzesTable
+          quizzes={filteredQuizzes}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onManage={handleManage}
+          onCopy={handleCopy}
+          onMonitor={handleMonitor}
+          onReport={handleReport}
+        />
       </div>
     </div>
   );

@@ -35,6 +35,40 @@ const startResult = async (req, res, next) => {
     if (user) draftPayload.user = user;
     else if (guestName) draftPayload.guestName = guestName;
 
+    // Prevent authenticated users from starting the same quiz twice
+    if (user) {
+      // If there's a completed attempt, return it to the client
+      const existingCompleted = await Result.findOne({
+        quiz,
+        user,
+        status: "completed",
+      }).sort({ takenAt: -1 });
+      if (existingCompleted) {
+        // 409 indicates conflict: quiz already taken
+        try {
+          await existingCompleted.populate(
+            "answers.question",
+            "text options correctIndex points",
+          );
+        } catch (e) {}
+        return res.status(409).json({
+          success: false,
+          message: "Quiz already taken",
+          result: existingCompleted,
+        });
+      }
+
+      // If there's an in-progress draft for the user, return that to allow resume
+      const existingDraft = await Result.findOne({
+        quiz,
+        user,
+        status: "in-progress",
+      }).sort({ createdAt: -1 });
+      if (existingDraft) {
+        return res.status(200).json({ success: true, result: existingDraft });
+      }
+    }
+
     const draft = await Result.create(draftPayload);
     res.status(201).json({ success: true, result: draft });
   } catch (err) {
@@ -166,6 +200,29 @@ const submitResult = async (req, res, next) => {
     }
 
     // No draft: create a completed result (guest or authenticated)
+    // Prevent duplicate completed attempts when no draft is provided
+    if (user) {
+      const existingCompleted = await Result.findOne({
+        quiz: quizId,
+        user,
+        status: "completed",
+      }).sort({ takenAt: -1 });
+      if (existingCompleted) {
+        try {
+          await existingCompleted.populate(
+            "answers.question",
+            "text options correctIndex points",
+          );
+        } catch (e) {}
+        return res
+          .status(409)
+          .json({
+            success: false,
+            message: "Quiz already taken",
+            result: existingCompleted,
+          });
+      }
+    }
     const createPayload = {
       quiz: quizId,
       score,
@@ -272,6 +329,42 @@ export default {
   getMyResults,
   getMySummary,
 };
+
+// Return a single result by id (populated). Ownership or teacher required.
+const getResultById = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!id)
+      return res
+        .status(400)
+        .json({ success: false, message: "Result id required" });
+    const result = await Result.findById(id)
+      .populate("answers.question", "text options correctIndex points")
+      .populate("quiz", "title timeLimit");
+    if (!result)
+      return res
+        .status(404)
+        .json({ success: false, message: "Result not found" });
+
+    const userId = req.user && req.user.id ? req.user.id : null;
+    // If result belongs to a user, ensure requester is owner or a teacher
+    if (result.user && userId && result.user.toString() !== userId) {
+      // allow teachers
+      if (!(req.user && req.user.role === "teacher")) {
+        return res.status(403).json({
+          success: false,
+          message: "Not authorized to view this result",
+        });
+      }
+    }
+
+    res.json({ success: true, result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export { getResultById };
 
 // Teacher analytics
 // Leaderboard for a quiz: top N users by best score

@@ -7,14 +7,22 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Attach auth token from localStorage to each request if present
+// Attach a lightweight dev user header from localStorage so backend optionalAuth
+// can identify the current user without JWTs.
 api.interceptors.request.use(
   (config) => {
     try {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${token}`;
+      const raw = localStorage.getItem("dev_user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u && u._id) {
+          config.headers = config.headers || {};
+          config.headers["x-user-id"] = u._id;
+        }
+        if (u && u.email) {
+          config.headers = config.headers || {};
+          config.headers["x-user-email"] = u.email;
+        }
       }
     } catch (e) {
       // ignore

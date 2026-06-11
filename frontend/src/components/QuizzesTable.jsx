@@ -17,57 +17,59 @@ export default function QuizzesTable({
       {quizzes.length === 0 ? (
         <p className="text-gray-500">No quizzes available.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {quizzes.map((q) => (
             <li
               key={q._id || q.id}
-              className="p-3 bg-white rounded shadow flex justify-between items-center"
+              className="p-4 bg-white rounded shadow flex flex-col md:flex-row md:items-center md:justify-between gap-3"
             >
-              <div>
-                <div className="font-medium">
+              <div className="flex-1">
+                <div className="font-semibold text-black text-lg">
                   {q.title || q.name || "Untitled"}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-600 mt-1">
                   {q.description || ""}
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Duration: {q.timeLimit ? `${q.timeLimit}s` : "—"} • Rules:{" "}
-                  {q.rules || "—"}
+                <div className="text-xs text-gray-400 mt-2">
+                  <span className="mr-3">
+                    Duration: {q.timeLimit ? `${q.timeLimit}s` : "—"}
+                  </span>
+                  <span>Rules: {q.rules || "—"}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  className="text-sm text-green-600"
+                  className="px-2 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200"
                   onClick={() => onManage(q)}
                 >
                   Manage
                 </button>
                 <button
-                  className="text-sm text-blue-600"
+                  className="px-2 py-1 bg-white border border-gray-200 text-sm rounded hover:bg-gray-50"
                   onClick={() => onEdit(q)}
                 >
                   Edit
                 </button>
                 <button
-                  className="text-sm text-yellow-600"
+                  className="px-2 py-1 bg-white border border-yellow-200 text-sm rounded hover:bg-yellow-50"
                   onClick={() => onCopy(q)}
                 >
                   Copy
                 </button>
                 <button
-                  className="text-sm text-indigo-600"
+                  className="px-2 py-1 bg-white border border-indigo-100 text-sm rounded hover:bg-indigo-50"
                   onClick={() => onMonitor(q)}
                 >
                   Monitor
                 </button>
                 <button
-                  className="text-sm text-purple-600"
+                  className="px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                   onClick={() => onReport(q)}
                 >
                   Reports
                 </button>
                 <button
-                  className="text-sm text-red-600"
+                  className="px-2 py-1 bg-red-50 text-red-600 text-sm rounded hover:bg-red-100"
                   onClick={() => onDelete(q)}
                 >
                   Delete

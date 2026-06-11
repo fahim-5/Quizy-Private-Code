@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../services/api";
 import QuizCard from "../components/QuizCard";
-import TeacherAnalytics from "../components/AdminAnalytics";
 
 export default function Dashboard() {
   const { user, token } = useContext(AuthContext);
@@ -274,75 +273,253 @@ export default function Dashboard() {
             </div>
 
             <div>
-              <TeacherAnalytics />
+              <section className="space-y-6">
+                <div className="bg-white rounded shadow p-4">
+                  <h3 className="text-lg font-semibold mb-2">Recent Quizzes</h3>
+                  {quizzes &&
+                  quizzes.filter(
+                    (q) =>
+                      String(q.createdBy?._id || q.createdBy || "") ===
+                      String(user._id),
+                  ).length === 0 ? (
+                    <div className="text-sm text-gray-600">No quizzes yet.</div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {quizzes
+                        .filter(
+                          (q) =>
+                            String(q.createdBy?._id || q.createdBy || "") ===
+                            String(user._id),
+                        )
+                        .sort(
+                          (a, b) =>
+                            new Date(b.createdAt) - new Date(a.createdAt),
+                        )
+                        .slice(0, 6)
+                        .map((q) => (
+                          <li
+                            key={q._id}
+                            className="flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-medium text-black">
+                                {q.title}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {q.joinCode || "-"} •{" "}
+                                {q.createdAt
+                                  ? new Date(q.createdAt).toLocaleDateString()
+                                  : "-"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  navigate(`/teacher/quiz/${q._id}`)
+                                }
+                                className="px-2 py-1 bg-gray-100 text-sm rounded"
+                              >
+                                Manage
+                              </button>
+                              <button
+                                onClick={() =>
+                                  navigate(`/teacher/reports/${q._id}`)
+                                }
+                                className="px-2 py-1 bg-blue-600 text-white text-sm rounded"
+                              >
+                                Reports
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="bg-white rounded shadow p-4">
+                  <h3 className="text-lg font-semibold mb-2">Your Courses</h3>
+                  {subjects &&
+                  subjects.filter(
+                    (s) =>
+                      s.createdBy?._id === user._id || s.createdBy === user._id,
+                  ).length === 0 ? (
+                    <div className="text-sm text-gray-600">No courses yet.</div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {subjects
+                        .filter(
+                          (s) =>
+                            s.createdBy?._id === user._id ||
+                            s.createdBy === user._id,
+                        )
+                        .slice(0, 6)
+                        .map((s) => (
+                          <li
+                            key={s._id}
+                            className="flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-medium text-black">
+                                {s.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {s.code || "-"}
+                              </div>
+                            </div>
+                            <div>
+                              <button
+                                onClick={() =>
+                                  navigate(`/teacher/courses/${s._id}`)
+                                }
+                                className="px-2 py-1 bg-black text-white text-sm rounded"
+                              >
+                                Manage
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
             </div>
           </div>
         ) : (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">
-                Available Quizzes for You
-              </h2>
+              <h2 className="text-xl font-semibold">Your Performance</h2>
+              <div>
+                <button
+                  onClick={() => navigate("/results")}
+                  className="text-sm text-gray-600"
+                >
+                  View All Results
+                </button>
+              </div>
             </div>
 
-            {/* Show up to 6 quizzes (3 columns) from enrolled courses only — prefer unattempted first */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {(() => {
-                const enrolled = subjects.filter((s) => s.isEnrolled);
-                if (!enrolled || enrolled.length === 0) {
-                  return (
-                    <div className="col-span-full p-6 bg-white rounded shadow">
-                      No enrolled courses yet.
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded shadow p-4">
+                  <h3 className="text-lg font-medium mb-3">Recent Attempts</h3>
+                  {results.length === 0 ? (
+                    <div className="text-sm text-gray-600">
+                      You have no attempts yet.
                     </div>
-                  );
-                }
+                  ) : (
+                    <ul className="space-y-3">
+                      {results.slice(0, 6).map((r) => (
+                        <li
+                          key={r._id}
+                          className="p-3 bg-gray-50 rounded flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-semibold">
+                              {r.quiz?.title || "Quiz"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Taken:{" "}
+                              {r.takenAt
+                                ? new Date(r.takenAt).toLocaleString()
+                                : "-"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Answered: {(r.answers || []).length} questions
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold">
+                              {r.total
+                                ? Math.round((r.score / r.total) * 100)
+                                : 0}
+                              %
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {r.score} / {r.total} pts
+                            </div>
+                            <div className="mt-2">
+                              <button
+                                onClick={async () => {
+                                  // fetch populated result and navigate to result view
+                                  try {
+                                    const res = await api.get(
+                                      `/results/${r._id}`,
+                                    );
+                                    const full = res?.data?.result || res?.data;
+                                    navigate("/result", {
+                                      state: { result: full },
+                                    });
+                                  } catch (e) {
+                                    navigate("/result", {
+                                      state: { result: r },
+                                    });
+                                  }
+                                }}
+                                className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                              >
+                                View
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
 
-                const enrolledIds = new Set(enrolled.map((s) => String(s._id)));
-                const candidateQuizzes = (quizzes || []).filter(
-                  (q) =>
-                    q &&
-                    q.subject &&
-                    enrolledIds.has(String(q.subject._id || q.subject)),
-                );
-
-                const attemptedQuizIds = new Set(
-                  (results || [])
-                    .map((r) =>
-                      r.quiz?._id ? String(r.quiz._id) : String(r.quiz),
-                    )
-                    .filter(Boolean),
-                );
-
-                const unattempted = candidateQuizzes
-                  .filter((q) => !attemptedQuizIds.has(String(q._id)))
-                  .sort(
-                    (a, b) =>
-                      new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
-                  );
-
-                const attempted = candidateQuizzes
-                  .filter((q) => attemptedQuizIds.has(String(q._id)))
-                  .sort(
-                    (a, b) =>
-                      new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
-                  );
-
-                const list = [...unattempted, ...attempted].slice(0, 6);
-
-                if (list.length === 0) {
-                  return (
-                    <div className="col-span-full p-6 bg-white rounded shadow">
-                      No quizzes available from your enrolled courses.
+              <div>
+                <div className="bg-white rounded shadow p-4">
+                  <h3 className="text-lg font-medium mb-3">Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <div className="text-sm text-gray-600">Attempts</div>
+                      <div className="font-semibold">{results.length}</div>
                     </div>
-                  );
-                }
-
-                return list.map((q) => (
-                  <div key={q._id}>
-                    <QuizCard quiz={q} onStart={() => handleStart(q)} />
+                    <div className="flex justify-between">
+                      <div className="text-sm text-gray-600">Average %</div>
+                      <div className="font-semibold">
+                        {(() => {
+                          const totalPoints = results.reduce(
+                            (acc, r) => acc + (r.total || 0),
+                            0,
+                          );
+                          const totalScore = results.reduce(
+                            (acc, r) => acc + (r.score || 0),
+                            0,
+                          );
+                          return totalPoints
+                            ? Math.round((totalScore / totalPoints) * 100)
+                            : 0;
+                        })()}
+                        %
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="text-sm text-gray-600">Best Score</div>
+                      <div className="font-semibold">
+                        {results.reduce(
+                          (acc, r) => Math.max(acc, r.score || 0),
+                          0,
+                        )}{" "}
+                        pts
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="text-sm text-gray-600">
+                        Questions Attempted
+                      </div>
+                      <div className="font-semibold">
+                        {results.reduce(
+                          (acc, r) =>
+                            acc + ((r.answers && r.answers.length) || 0),
+                          0,
+                        )}
+                      </div>
+                    </div>
                   </div>
-                ));
-              })()}
+                </div>
+              </div>
             </div>
           </section>
         )}

@@ -1,32 +1,10 @@
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/User.js";
 import AppError from "../utils/appError.js";
 import { sendEmail } from "../utils/email.js";
 import verificationEmail from "../utils/emailTemplates/verificationTemplate.js";
 
-// Generate JWT Token
-// Default JWT secret for development
-const defaultSecret = "dev-secret-change-me";
-const generateToken = (id) => {
-  const secret = process.env.JWT_SECRET || defaultSecret;
-  return jwt.sign({ id }, secret, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "30d",
-  });
-};
-
-// Send token response
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = generateToken(user._id);
-
-  res.status(statusCode).json({
-    success: true,
-    token,
-    data: {
-      user,
-    },
-  });
-};
+// Tokens removed for dev mode: endpoints return user data only
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -135,9 +113,8 @@ export const verifyEmail = async (req, res, next) => {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    // return token so user can be logged in immediately
-    const token = generateToken(user._id);
-    res.status(200).json({ success: true, token, data: { user } });
+    // return user (no token in dev mode)
+    res.status(200).json({ success: true, data: { user } });
   } catch (err) {
     next(err);
   }
@@ -319,9 +296,45 @@ export const login = async (req, res, next) => {
       return next(new AppError("Invalid credentials", 401));
     }
 
-    sendTokenResponse(user, 200, res);
+    res.status(200).json({ success: true, data: { user } });
   } catch (error) {
     next(error);
+  }
+};
+
+// Development helper: find-or-create a dev user by identifier or email
+export const devLogin = async (req, res, next) => {
+  try {
+    const { id, email, role, name } = req.body;
+    if (!id && !email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Provide id or email" });
+    }
+
+    let user = null;
+    if (email)
+      user = await User.findOne({ email: String(email).toLowerCase() });
+    if (!user && id) user = await User.findOne({ identifier: String(id) });
+
+    if (!user) {
+      const payload = {
+        name: name || (email ? email.split("@")[0] : id),
+        identifier: id || (email ? email.split("@")[0] : `dev_${Date.now()}`),
+        email: email
+          ? String(email).toLowerCase()
+          : `${(id || "dev").toString()}@local`,
+        password: "devpass",
+        role: role === "teacher" ? "teacher" : "student",
+        institution: "local",
+        isVerified: true,
+      };
+      user = await User.create(payload);
+    }
+
+    res.status(200).json({ success: true, data: { user } });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -330,14 +343,18 @@ export const login = async (req, res, next) => {
 // @access  Private
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        user,
-      },
-    });
+    // Try to resolve a DB user by id (_id or id); if not found return req.user (dev shim)
+    const lookupId = req.user && (req.user._id || req.user.id);
+    let found = null;
+    if (lookupId) {
+      try {
+        found = await User.findById(lookupId);
+      } catch (e) {
+        found = null;
+      }
+    }
+    const outUser = found || req.user || null;
+    res.status(200).json({ success: true, data: { user: outUser } });
   } catch (error) {
     next(error);
   }

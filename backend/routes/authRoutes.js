@@ -2,6 +2,7 @@ import express from "express";
 import {
   register,
   login,
+  devLogin,
   getMe,
   verifyEmail,
   resendVerification,
@@ -16,6 +17,7 @@ const router = express.Router();
 
 router.post("/register", validateUser, register);
 router.post("/login", login);
+router.post("/dev-login", devLogin);
 router.post("/verify-email", verifyEmail);
 router.post("/resend-verification", resendVerification);
 router.post("/forgot-password", requestPasswordReset);
