@@ -101,6 +101,8 @@ export const updatePost = async (req, res, next) => {
 // @desc    Delete post
 // @route   DELETE /api/posts/:id
 // @access  Private
+
+
 export const deletePost = async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);

@@ -44,18 +44,7 @@ export default function QuizzesTable({
                 >
                   Manage
                 </button>
-                <button
-                  className="px-2 py-1 bg-white border border-gray-200 text-sm rounded hover:bg-gray-50"
-                  onClick={() => onEdit(q)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="px-2 py-1 bg-white border border-yellow-200 text-sm rounded hover:bg-yellow-50"
-                  onClick={() => onCopy(q)}
-                >
-                  Copy
-                </button>
+                {/* Edit and Copy removed per UX request */}
                 <button
                   className="px-2 py-1 bg-white border border-indigo-100 text-sm rounded hover:bg-indigo-50"
                   onClick={() => onMonitor(q)}
@@ -63,13 +52,13 @@ export default function QuizzesTable({
                   Monitor
                 </button>
                 <button
-                  className="px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                  className="px-2 py-1 bg-white border border-gray-200 text-sm rounded hover:bg-gray-50"
                   onClick={() => onReport(q)}
                 >
                   Reports
                 </button>
                 <button
-                  className="px-2 py-1 bg-red-50 text-red-600 text-sm rounded hover:bg-red-100"
+                  className="px-2 py-1 bg-white border border-red-200 text-red-600 text-sm rounded hover:bg-red-50"
                   onClick={() => onDelete(q)}
                 >
                   Delete

@@ -57,11 +57,29 @@ export default function TeacherQuizzes() {
     if (!confirm("Delete this quiz?")) return;
     try {
       setLoading(true);
-      await api.delete(
-        `/quizzes/${q._id || q.id}`,
-        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-      );
-      await fetchQuizzes();
+      // ensure backend receives current user id header for dev mode auth
+      // ensure backend receives current user id/email header for dev mode auth
+      const cfg = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {
+            headers: {
+              "x-user-id":
+                user && (user._id || user.id) ? user._id || user.id : undefined,
+              "x-user-email": user && user.email ? user.email : undefined,
+            },
+          };
+      const res = await api.delete(`/quizzes/${q._id || q.id}`, cfg);
+      // If API reports success, remove the quiz from local state immediately
+      if (res && (res.data?.success || res.status === 200)) {
+        const removedId = res.data?.quizId || q._id || q.id;
+        setQuizzes((prev) =>
+          (prev || []).filter(
+            (x) => String(x._id || x.id) !== String(removedId),
+          ),
+        );
+      } else {
+        await fetchQuizzes();
+      }
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Delete failed");
     } finally {
