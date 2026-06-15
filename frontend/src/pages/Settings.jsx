@@ -4,7 +4,7 @@ import api from "../services/api";
 import useAuth from "../hooks/useAuth";
 
 export default function Settings() {
-  const { user, login } = useAuth() || {};
+  const { user, login, logout } = useAuth() || {};
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
@@ -40,128 +40,43 @@ export default function Settings() {
     load();
   }, [user]);
 
-  const handleSave = async () => {
-    if (!user) return navigate("/login");
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.put(`/users/${user._id}`, form);
-      const updated = res.data.data || res.data;
-      // update auth context
-      login && login(updated, localStorage.getItem("token"));
-      setSuccess("Profile updated");
-    } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Save failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-
-  const handleChangePassword = async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await api.put(`/users/${user._id}/password`, {
-        currentPassword,
-        newPassword,
-      });
-      setSuccess("Password updated");
-      setCurrentPassword("");
-      setNewPassword("");
-    } catch (err) {
-      setError(
-        err?.response?.data?.message || err.message || "Password change failed",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Verification/modal state for email/password change
-  const [needsVerify, setNeedsVerify] = useState(false);
-  const [verifyCode, setVerifyCode] = useState("");
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [verifyMessage, setVerifyMessage] = useState(null);
-
-  const sendVerificationIfNeeded = async () => {
-    // send code to the new email if email changed or password change requested
-    try {
-      await api.post("/auth/forgot-password", { email: form.email.trim().toLowerCase() });
-      setVerifyMessage("Verification code sent to email");
-      setNeedsVerify(true);
-    } catch (err) {
-      throw new Error(err?.response?.data?.message || err.message || "Failed to send verification code");
-    }
-  };
-
-  const applyUpdatesAfterVerify = async () => {
-    // perform password change first (if requested), then profile update
-    try {
-      if (newPassword) {
-        await api.put(`/users/${user._id}/password`, {
-          currentPassword,
-          newPassword,
-        });
-      }
-
-      const res = await api.put(`/users/${user._id}`, form);
-      const updated = res.data.data || res.data;
-      login && login(updated, localStorage.getItem("token"));
-      setSuccess("Profile updated");
-      setCurrentPassword("");
-      setNewPassword("");
-    } catch (err) {
-      throw new Error(err?.response?.data?.message || err.message || "Update failed");
-    }
-  };
 
   const handleSaveUpdate = async () => {
     if (!user) return navigate("/login");
     setLoading(true);
     setError(null);
     setSuccess(null);
-    try {
-      const emailChanged = form.email && form.email.toLowerCase() !== (user.email || "").toLowerCase();
-      const passwordChangeRequested = newPassword && newPassword.length > 0;
 
-      if (emailChanged || passwordChangeRequested) {
-        // send verification code and show modal
-        await sendVerificationIfNeeded();
-        setLoading(false);
-        return;
+    try {
+      // If user requested a password change, verify current password first
+      if (newPassword && newPassword.length > 0) {
+        try {
+          await api.put(`/users/${user._id}/password`, {
+            currentPassword,
+            newPassword,
+          });
+          setSuccess("Password updated");
+          setCurrentPassword("");
+          setNewPassword("");
+        } catch (err) {
+          // On wrong current password (or other failure), log the user out as requested
+          logout && logout();
+          navigate("/login");
+          return;
+        }
       }
 
-      // no verification needed, do immediate save
+      // Update profile (name/email/institution) without email verification
       const res = await api.put(`/users/${user._id}`, form);
       const updated = res.data.data || res.data;
       login && login(updated, localStorage.getItem("token"));
       setSuccess("Profile updated");
     } catch (err) {
-      setError(err?.message || "Save failed");
+      setError(err?.response?.data?.message || err.message || "Save failed");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    setVerifyLoading(true);
-    setError(null);
-    try {
-      if (!/^\d{6}$/.test(verifyCode)) throw new Error("Enter the 6-digit code");
-      await api.post("/auth/verify-reset", { email: form.email.trim().toLowerCase(), code: verifyCode.trim() });
-      // code valid, apply updates
-      await applyUpdatesAfterVerify();
-      setNeedsVerify(false);
-      setVerifyCode("");
-      setVerifyMessage(null);
-    } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Verification failed");
-    } finally {
-      setVerifyLoading(false);
     }
   };
 
@@ -182,18 +97,7 @@ export default function Settings() {
               className="w-full border px-2 py-1 rounded"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-black">
-              Email
-            </label>
-            <input
-              value={form.email}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, email: e.target.value }))
-              }
-              className="w-full border px-2 py-1 rounded"
-            />
-          </div>
+          {/* Email editing removed — managed separately */}
           <div>
             <label className="block text-sm font-medium text-black">
               Institution
@@ -230,10 +134,7 @@ export default function Settings() {
                   className="w-full border px-2 py-1 rounded"
                 />
               </div>
-              <div className="flex gap-2">
-                {/* password change will be applied when saving updates */}
-                <div className="text-sm text-gray-500">Password will be updated when you click Save Update</div>
-              </div>
+              {/* Inline success and quick login button shown below the new password field */}
             </div>
           </div>
 
@@ -252,39 +153,6 @@ export default function Settings() {
               Cancel
             </button>
           </div>
-
-          {needsVerify && (
-            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg max-w-sm w-full">
-                <h3 className="text-lg font-semibold mb-2">Verify change</h3>
-                <p className="text-sm mb-3">{verifyMessage || "Enter the 6-digit code sent to your email"}</p>
-                <input
-                  value={verifyCode}
-                  onChange={(e) => setVerifyCode(e.target.value.replace(/[^0-9]/g, "").slice(0,6))}
-                  placeholder="6-digit code"
-                  inputMode="numeric"
-                  maxLength={6}
-                  className="w-full border px-2 py-1 rounded mb-3"
-                />
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => { setNeedsVerify(false); setVerifyCode(""); setVerifyMessage(null); }}
-                    className="px-3 py-1 border rounded"
-                    disabled={verifyLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleVerifyCode}
-                    className="px-3 py-1 bg-black text-white rounded"
-                    disabled={verifyLoading}
-                  >
-                    {verifyLoading ? "Verifying..." : "Verify"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
