@@ -4,7 +4,7 @@
 # Common Things 
   1. Profile ✅
 # Teacher 
-  1. ✅   
+  1. Dashboard ✅   
 # Studnet 
   1. ✅   
   

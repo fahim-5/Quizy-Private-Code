@@ -1,9 +1,10 @@
-Rifa: ( FrontEnd Student)
+Rifa and Abdullah : ( FrontEnd Student)
 1. Profile.jsx
-2. Dasboard.jsx
-3. Courses.jsx
-4. frontend\src\components\Navbar.jsx
-5. frontend\src\pages\Forgot.jsx
+2. Seeting.jsx
+3. Footer
+4. Pura compomenet folder ta
+3. Front end er desgin gula amra dumy data dia file generte korche . ract a kaj ta korche amra only.
+4. 
 6. 
 7. 
 8. 

@@ -8,9 +8,13 @@ const createQuiz = async (req, res, next) => {
     // if a specific subject id is provided, return quizzes for that subject
     if (typeof req.query.subject === "string" && req.query.subject.trim()) {
       const subjId = String(req.query.subject).trim();
-      const filter = {};
+      // By default exclude soft-deleted quizzes; allow including them via includeDeleted=true
+      const filter = { subject: subjId, isActive: true };
       if (req.query.all === "true") {
-        filter.subject = subjId;
+        if (req.query.includeDeleted === "true") {
+          // caller requested deleted quizzes included
+          delete filter.isActive;
+        }
         const quizzes = await Quiz.find(filter)
           .limit(500)
           .populate("createdBy", "name identifier");
@@ -179,6 +183,8 @@ const getQuizzes = async (req, res, next) => {
       return res.json({ success: true, quizzes });
     }
     if (req.query.all === "true") {
+      // By default exclude soft-deleted quizzes; allow including them via includeDeleted=true
+      const base = req.query.includeDeleted === "true" ? {} : { isActive: true };
       if (search) {
         // search across title or subject code
         const regex = new RegExp(
@@ -210,13 +216,12 @@ const getQuizzes = async (req, res, next) => {
           .populate("createdBy", "name identifier");
         return res.json({ success: true, quizzes });
       }
-      const base = {};
-      if (req.query.mine === "true" && req.user) {
-        base.createdBy = req.user.id;
-      }
-      const quizzes = await Quiz.find(base)
-        .limit(500)
-        .populate("createdBy", "name identifier");
+        if (req.query.mine === "true" && req.user) {
+          base.createdBy = req.user.id;
+        }
+        const quizzes = await Quiz.find(base)
+          .limit(500)
+          .populate("createdBy", "name identifier");
       return res.json({ success: true, quizzes });
     }
 
@@ -351,6 +356,7 @@ const deleteQuiz = async (req, res, next) => {
   try {
     // Soft-delete: mark inactive and record who deleted and when
     const quiz = await Quiz.findById(req.params.id);
+
     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
     if (
       req.user &&

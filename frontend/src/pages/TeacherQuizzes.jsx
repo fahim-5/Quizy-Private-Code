@@ -11,7 +11,7 @@ export default function TeacherQuizzes() {
   const [error, setError] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  // live search query
 
   useEffect(() => {
     if (!user) return;
@@ -51,17 +51,41 @@ export default function TeacherQuizzes() {
     navigate(`/quiz/${q._id || q.id}`);
   };
   const handleManage = (q) => {
+    // Open the Quiz Editor (Basic info) so teacher can edit time/description first,
+    // then proceed to questions. New route: /teacher/quiz/:id/edit
+    navigate(`/teacher/quiz/${q._id || q.id}/edit`);
+  };
+  const handleQuestions = (q) => {
+    // Open the Questions manager for this quiz
     navigate(`/teacher/quiz/${q._id || q.id}`);
   };
   const handleDelete = async (q) => {
     if (!confirm("Delete this quiz?")) return;
     try {
       setLoading(true);
-      await api.delete(
-        `/quizzes/${q._id || q.id}`,
-        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-      );
-      await fetchQuizzes();
+      // ensure backend receives current user id header for dev mode auth
+      // ensure backend receives current user id/email header for dev mode auth
+      const cfg = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {
+            headers: {
+              "x-user-id":
+                user && (user._id || user.id) ? user._id || user.id : undefined,
+              "x-user-email": user && user.email ? user.email : undefined,
+            },
+          };
+      const res = await api.delete(`/quizzes/${q._id || q.id}`, cfg);
+      // If API reports success, remove the quiz from local state immediately
+      if (res && (res.data?.success || res.status === 200)) {
+        const removedId = res.data?.quizId || q._id || q.id;
+        setQuizzes((prev) =>
+          (prev || []).filter(
+            (x) => String(x._id || x.id) !== String(removedId),
+          ),
+        );
+      } else {
+        await fetchQuizzes();
+      }
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Delete failed");
     } finally {
@@ -86,9 +110,6 @@ export default function TeacherQuizzes() {
   const handleReport = (q) => navigate(`/teacher/reports/${q._id || q.id}`);
 
   const filteredQuizzes = quizzes.filter((q) => {
-    if (filter === "draft") return q.status === "draft" || q.draft;
-    if (filter === "published")
-      return q.status === "published" || q.visibleFrom;
     if (query && query.trim()) {
       const t = (q.title || q.name || "").toLowerCase();
       return t.includes(query.trim().toLowerCase());
@@ -103,28 +124,42 @@ export default function TeacherQuizzes() {
     <div className="bg-white min-h-screen p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-black">My Quizzes</h2>
-          <div className="text-sm text-gray-600">
-            Showing your quizzes (newest first)
-          </div>
+          <h2 className="text-2xl font-bold text-black">Your Quizzes</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage and review your quizzes
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
-            <input
-              placeholder="Search quizzes..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="bg-transparent outline-none text-sm px-2 w-48"
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="text-sm bg-transparent outline-none"
-            >
-              <option value="all">All</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-            </select>
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
+              <input
+                placeholder="Search quizzes by name..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="bg-transparent outline-none text-sm px-2 w-56"
+              />
+            </div>
+            {/* Live suggestions */}
+            {query && query.trim() !== "" && (
+              <div className="absolute mt-1 w-56 bg-white border rounded shadow z-20">
+                {(quizzes || [])
+                  .filter((q) =>
+                    (q.title || q.name || "")
+                      .toLowerCase()
+                      .includes(query.trim().toLowerCase()),
+                  )
+                  .slice(0, 6)
+                  .map((q) => (
+                    <div
+                      key={q._id}
+                      onClick={() => navigate(`/teacher/quiz/${q._id || q.id}`)}
+                      className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                    >
+                      {q.title || q.name}
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
           <button
             onClick={fetchQuizzes}
@@ -149,9 +184,8 @@ export default function TeacherQuizzes() {
           quizzes={filteredQuizzes}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onManage={handleManage}
+          onQuestions={handleQuestions}
           onCopy={handleCopy}
-          onMonitor={handleMonitor}
           onReport={handleReport}
         />
       </div>

@@ -4,7 +4,8 @@ export default function QuizzesTable({
   quizzes = [],
   onEdit = () => {},
   onDelete = () => {},
-  onManage = () => {},
+  onManage,
+  onQuestions = () => {},
   onCopy = () => {},
   onMonitor = () => {},
   onReport = () => {},
@@ -38,38 +39,37 @@ export default function QuizzesTable({
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
+                {typeof onManage === "function" ? (
+                  <button
+                    className="px-2 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                    onClick={() => onManage(q)}
+                  >
+                    Manage
+                  </button>
+                ) : null}
                 <button
                   className="px-2 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200"
-                  onClick={() => onManage(q)}
+                  onClick={() => onQuestions(q)}
                 >
-                  Manage
+                  Questions
                 </button>
+                {/* Edit and Copy removed per UX request */}
+                {typeof onMonitor === "function" ? (
+                  <button
+                    className="px-2 py-1 bg-white border border-indigo-100 text-sm rounded hover:bg-indigo-50"
+                    onClick={() => onMonitor(q)}
+                  >
+                    Monitor
+                  </button>
+                ) : null}
                 <button
                   className="px-2 py-1 bg-white border border-gray-200 text-sm rounded hover:bg-gray-50"
-                  onClick={() => onEdit(q)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="px-2 py-1 bg-white border border-yellow-200 text-sm rounded hover:bg-yellow-50"
-                  onClick={() => onCopy(q)}
-                >
-                  Copy
-                </button>
-                <button
-                  className="px-2 py-1 bg-white border border-indigo-100 text-sm rounded hover:bg-indigo-50"
-                  onClick={() => onMonitor(q)}
-                >
-                  Monitor
-                </button>
-                <button
-                  className="px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                   onClick={() => onReport(q)}
                 >
                   Reports
                 </button>
                 <button
-                  className="px-2 py-1 bg-red-50 text-red-600 text-sm rounded hover:bg-red-100"
+                  className="px-2 py-1 bg-white border border-red-200 text-red-600 text-sm rounded hover:bg-red-50"
                   onClick={() => onDelete(q)}
                 >
                   Delete

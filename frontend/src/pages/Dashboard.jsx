@@ -238,7 +238,7 @@ export default function Dashboard() {
                       Create Quiz
                     </button>
                     <button
-                      onClick={() => navigate("/teacher")}
+                      onClick={() => navigate("/teacher/quizzes")}
                       className="text-sm text-gray-600"
                     >
                       View all
@@ -325,7 +325,7 @@ export default function Dashboard() {
                                 onClick={() =>
                                   navigate(`/teacher/reports/${q._id}`)
                                 }
-                                className="px-2 py-1 bg-blue-600 text-white text-sm rounded"
+                                className="px-2 py-1 bg-black text-white text-sm rounded"
                               >
                                 Reports
                               </button>
@@ -455,7 +455,7 @@ export default function Dashboard() {
                                     });
                                   }
                                 }}
-                                className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                                className="px-3 py-1 bg-black text-white rounded text-sm"
                               >
                                 View
                               </button>

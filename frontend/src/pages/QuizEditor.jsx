@@ -212,31 +212,6 @@ export default function QuizEditor() {
 
       {error && <div className="mb-4 text-red-600">{error}</div>}
 
-      <div className="mb-6">
-        <div className="flex gap-3">
-          <div
-            className={`px-3 py-1 rounded ${step === 1 ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-          >
-            1 Basic
-          </div>
-          <div
-            className={`px-3 py-1 rounded ${step === 2 ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-          >
-            2 Questions
-          </div>
-          <div
-            className={`px-3 py-1 rounded ${step === 3 ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-          >
-            3 Settings
-          </div>
-          <div
-            className={`px-3 py-1 rounded ${step === 4 ? "bg-black text-white" : "bg-gray-100 text-gray-700"}`}
-          >
-            4 Publish
-          </div>
-        </div>
-      </div>
-
       {step === 1 && (
         <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
           <h3 className="font-semibold mb-3">Basic Info</h3>

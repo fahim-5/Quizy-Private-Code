@@ -58,6 +58,7 @@ export default function AppRoutes() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/teacher/monitor/:id" element={<LiveMonitor />} />
       <Route path="/teacher/quiz/:id" element={<ManageQuestions />} />
+      <Route path="/teacher/quiz/:id/edit" element={<QuizEditor />} />
       <Route path="/teacher/reports/:quizId" element={<Reports />} />
     </Routes>
   );

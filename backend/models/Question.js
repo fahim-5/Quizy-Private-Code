@@ -15,6 +15,8 @@ const QuestionSchema = new mongoose.Schema({
   // For short answer expected text (optional)
   answerText: { type: String },
   points: { type: Number, default: 1, min: 1, max: 100 },
+  // extraTime in seconds to allocate for this question (optional)
+  extraTime: { type: Number, default: 0, min: 0 },
 });
 
 // Validate based on question type
@@ -56,6 +58,14 @@ QuestionSchema.pre("validate", function (next) {
     }
   } else if (this.type === "short") {
     // answerText optional; no options required
+  }
+  // ensure extraTime is non-negative number
+  if (
+    typeof this.extraTime !== "undefined" &&
+    this.extraTime !== null &&
+    (typeof this.extraTime !== "number" || Number(this.extraTime) < 0)
+  ) {
+    return next(new Error("extraTime must be a non-negative number"));
   }
 
   // points already constrained by schema min/max
