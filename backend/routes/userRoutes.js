@@ -7,6 +7,7 @@ import {
   deleteUser,
   getMe,
   changePassword,
+  deleteMe,
 } from "../controllers/userController.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -22,6 +23,9 @@ router.put("/me", updateMe);
 
 // Change password
 router.put("/:id/password", changePassword);
+
+// Delete current user (self-delete)
+router.delete("/me", deleteMe);
 
 router.get("/", authorize("admin"), getUsers);
 router.get("/:id", authorize("admin"), getUser);

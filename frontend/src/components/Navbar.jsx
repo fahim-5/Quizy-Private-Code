@@ -13,9 +13,9 @@ const Navbar = () => {
   const { user, logout, token } = useAuth() || {};
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [quizzesCache, setQuizzesCache] = useState([]);
-  const [subjectsMap, setSubjectsMap] = useState({});
+  const [subjectsCache, setSubjectsCache] = useState([]);
   const searchRef = useRef(null);
+  const searchContainerRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const userMenuRef = useRef(null);
 
@@ -23,42 +23,7 @@ const Navbar = () => {
   useEffect(() => {
     let mounted = true;
 
-    // fetch quizzes and subjects for teacher search when user is available
-    const fetchForSearch = async () => {
-      if (!user || user.role !== "teacher") return;
-      try {
-        const [qRes, sRes] = await Promise.allSettled([
-          api.get(
-            "/quizzes?all=true",
-            token
-              ? { headers: { Authorization: `Bearer ${token}` } }
-              : undefined,
-          ),
-          api.get(
-            "/subjects",
-            token
-              ? { headers: { Authorization: `Bearer ${token}` } }
-              : undefined,
-          ),
-        ]);
-        if (!mounted) return;
-        const quizzes =
-          qRes.status === "fulfilled"
-            ? qRes.value.data.quizzes || qRes.value.data || []
-            : [];
-        const subjects =
-          sRes.status === "fulfilled" ? sRes.value.data.subjects || [] : [];
-        const map = {};
-        subjects.forEach((s) => {
-          map[s._id] = s;
-        });
-        setQuizzesCache(quizzes);
-        setSubjectsMap(map);
-      } catch (e) {
-        // ignore
-      }
-    };
-    fetchForSearch();
+    // no upfront prefetch; searches will query courses (subjects) from the server
 
     function handleClickOutside(e) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
@@ -67,12 +32,19 @@ const Navbar = () => {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target)) {
         setIsOpen(false);
       }
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target)
+      ) {
+        setSearchResults([]);
+      }
     }
 
     function handleKey(e) {
       if (e.key === "Escape") {
         setUserMenuOpen(false);
         setIsOpen(false);
+        setSearchResults([]);
       }
     }
 
@@ -85,33 +57,22 @@ const Navbar = () => {
     };
   }, [user]);
 
-  // live filter when searchQuery changes
+  // Debounced server-backed search on typing for courses (subjects)
   useEffect(() => {
     if (!searchQuery) {
       setSearchResults([]);
       return;
     }
-    const q = searchQuery.trim().toLowerCase();
-    const matches = quizzesCache
-      .filter((z) => {
-        const title = (z.title || "").toLowerCase();
-        const subj = subjectsMap[z.subject]
-          ? subjectsMap[z.subject].code || ""
-          : "";
-        return title.includes(q) || subj.toLowerCase().includes(q);
-      })
-      .slice(0, 8)
-      .map((z) => ({
-        ...z,
-        subjectCode: subjectsMap[z.subject]
-          ? subjectsMap[z.subject].code
-          : undefined,
-        type: "quiz",
-      }));
-    setSearchResults(matches);
-  }, [searchQuery, quizzesCache, subjectsMap]);
 
-  // perform server-backed search (on Enter or button click)
+    const handler = setTimeout(() => {
+      performSearch();
+    }, 300);
+
+    return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, user]);
+
+  // perform server-backed search for courses (subjects) only
   const performSearch = async () => {
     const q = (searchQuery || "").trim();
     if (!q) {
@@ -120,44 +81,19 @@ const Navbar = () => {
       return;
     }
     try {
-      const quizUrl =
-        user && user.role === "teacher"
-          ? `/quizzes?search=${encodeURIComponent(q)}&all=true`
-          : `/quizzes?search=${encodeURIComponent(q)}`;
       const subjectUrl = `/subjects?search=${encodeURIComponent(q)}`;
-      const [sRes, qRes] = await Promise.allSettled([
-        api.get(
-          subjectUrl,
-          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-        ),
-        api.get(
-          quizUrl,
-          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-        ),
-      ]);
-
-      const subjects =
-        sRes.status === "fulfilled" ? sRes.value.data.subjects || [] : [];
-      const quizzes =
-        qRes.status === "fulfilled" ? qRes.value.data.quizzes || [] : [];
-
-      const mappedSubjects = subjects.map((s) => ({
+      const res = await api.get(
+        subjectUrl,
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+      );
+      const subjects = res?.data?.subjects || [];
+      const mapped = subjects.slice(0, 8).map((s) => ({
         _id: s._id,
         title: s.name,
         subjectCode: s.code,
         type: "subject",
       }));
-      const mappedQuizzes = quizzes.map((z) => ({
-        ...z,
-        title: z.title || "",
-        subjectCode: subjectsMap[z.subject]
-          ? subjectsMap[z.subject].code
-          : undefined,
-        type: "quiz",
-      }));
-
-      const merged = [...mappedSubjects, ...mappedQuizzes].slice(0, 8);
-      setSearchResults(merged);
+      setSearchResults(mapped);
     } catch (err) {
       setSearchResults([]);
     }
@@ -203,82 +139,94 @@ const Navbar = () => {
             >
               <img src={logo} alt="Qizy logo" className="h-12 mr-2 w-auto" />
             </button>
-            <div className="hidden lg:block">
-              <div className="relative">
-                <input
-                  ref={searchRef}
-                  type="search"
-                  placeholder="Course or quiz name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      performSearch();
-                    }
-                  }}
-                  className="border rounded-md px-3 py-1 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-black text-black bg-white"
-                  aria-label="Search courses and quizzes"
-                />
-                <button
-                  onClick={() => performSearch()}
-                  className="absolute right-0 top-0 mt-1 mr-1 p-1 text-gray-600 hover:text-black"
-                  aria-label="Search"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            {user && (
+              <div className="hidden lg:block">
+                <div className="relative" ref={searchContainerRef}>
+                  <input
+                    ref={searchRef}
+                    type="search"
+                    placeholder="Course or quiz name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        performSearch();
+                      }
+                    }}
+                    className="border rounded-md px-3 py-1 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-black text-black bg-white"
+                    aria-label="Search courses and quizzes"
+                  />
+                  <button
+                    onClick={() => performSearch()}
+                    className="absolute right-0 top-0 mt-1 mr-1 p-1 text-gray-600 hover:text-black"
+                    aria-label="Search"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
-                    />
-                  </svg>
-                </button>
-                {searchQuery && (
-                  <div className="absolute left-0 mt-1 w-64 bg-white border rounded-md shadow-lg z-50 max-h-64 overflow-auto">
-                    {searchResults.length > 0 ? (
-                      searchResults.map((r) => (
-                        <button
-                          key={r._id}
-                          onClick={() => {
-                            setSearchQuery("");
-                            setSearchResults([]);
-                            if (r.type === "subject") {
-                              navigate(`/teacher/courses/${r._id}`);
-                            } else {
-                              navigate(`/teacher/quiz/${r._id}`);
-                            }
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
-                        >
-                          <div className="font-medium text-black">
-                            {r.title}{" "}
-                            {r.type === "subject" && (
-                              <span className="text-xs text-gray-400">
-                                (Course)
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {r.subjectCode || "—"}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        No results
-                      </div>
-                    )}
-                  </div>
-                )}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
+                      />
+                    </svg>
+                  </button>
+                  {searchQuery && (
+                    <div className="absolute left-0 mt-1 w-64 bg-white border rounded-md shadow-lg z-50 max-h-64 overflow-auto">
+                      {searchResults.length > 0 ? (
+                        searchResults.map((r) => (
+                          <button
+                            key={r._id}
+                            onClick={() => {
+                              setSearchQuery("");
+                              setSearchResults([]);
+                              // Navigate to different routes depending on user role
+                              const isTeacher = user && user.role === "teacher";
+                              if (r.type === "subject") {
+                                navigate(
+                                  isTeacher
+                                    ? `/teacher/courses/${r._id}`
+                                    : `/courses/${r._id}`,
+                                );
+                              } else {
+                                navigate(
+                                  isTeacher
+                                    ? `/teacher/quiz/${r._id}`
+                                    : `/quiz/${r._id}`,
+                                );
+                              }
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                          >
+                            <div className="font-medium text-black">
+                              {r.title}{" "}
+                              {r.type === "subject" && (
+                                <span className="text-xs text-gray-400">
+                                  (Course)
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {r.subjectCode || "—"}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-500">
+                          No results
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="hidden md:flex items-center space-x-6">

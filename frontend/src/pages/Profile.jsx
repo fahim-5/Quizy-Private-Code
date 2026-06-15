@@ -10,7 +10,6 @@ import {
   FaUserShield,
   FaSignOutAlt,
 } from "react-icons/fa";
-import Avatar from "../components/Avatar";
 
 import api from "../services/api";
 import { AuthContext } from "../context/AuthContext";
@@ -125,11 +124,14 @@ export default function Profile() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Profile</h1>
-
-            <p className="text-gray-500 mt-1 text-sm">
-              Your account information.
-            </p>
+            {profile && (
+              <div className="mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {profile.name || profile.identifier}
+                </h2>
+                <p className="text-sm text-gray-500">{profile.email}</p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -149,67 +151,34 @@ export default function Profile() {
           <div className="h-24 bg-gray-100" />
 
           <div className="px-6 pb-8">
-            {/* User Info */}
-            <div className="-mt-12 flex flex-col md:flex-row md:items-center gap-5">
-              {/* Avatar */}
-              <div>
-                <Avatar
-                  user={profile}
-                  size="w-24 h-24"
-                  iconSize="h-12 w-12"
-                  className="border-4 border-white shadow-sm"
-                />
-              </div>
+            {/* Minimal user header — avatar and extra details removed for simplicity */}
+            <div className="pt-6">
+              {isEditing ? (
+                <div className="space-y-2 max-w-md">
+                  <input
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    placeholder="Full name"
+                    className="w-full text-lg font-medium border-b px-2 py-1 focus:outline-none"
+                  />
 
-              <div className="flex-1">
-                {isEditing ? (
-                  <div className="space-y-2">
+                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+                    <FaEnvelope />
                     <input
-                      value={form.name}
+                      value={form.email}
                       onChange={(e) =>
-                        setForm((f) => ({ ...f, name: e.target.value }))
+                        setForm((f) => ({ ...f, email: e.target.value }))
                       }
-                      className="w-full text-2xl font-semibold border-b px-2 py-1 focus:outline-none"
+                      placeholder="Email"
+                      className="w-full border-b px-2 py-1 focus:outline-none"
                     />
-
-                    <div className="flex flex-col gap-2 mt-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <FaEnvelope />
-                        <input
-                          value={form.email}
-                          onChange={(e) =>
-                            setForm((f) => ({ ...f, email: e.target.value }))
-                          }
-                          className="w-full border-b px-2 py-1 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <FaUserShield />
-                        <span className="text-gray-700">{profile.role}</span>
-                      </div>
-                    </div>
                   </div>
-                ) : (
-                  <>
-                    <h2 className="text-4xl md:text-5xl mb-2 font-extrabold text-gray-800 leading-tight">
-                      {profile.name || profile.identifier}
-                    </h2>
-
-                    <div className="flex flex-wrap  items-center gap-4 mt-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <FaEnvelope />
-                        {profile.email}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <FaUserShield />
-                        {profile.role}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div />
+              )}
             </div>
 
             {/* messages */}

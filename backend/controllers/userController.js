@@ -189,3 +189,33 @@ export const changePassword = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Delete current logged-in user (self)
+// @route   DELETE /api/users/me
+// @access  Private (owner)
+export const deleteMe = async (req, res, next) => {
+  try {
+    if (!req.user) return next(new AppError("Not authenticated", 401));
+
+    const { currentPassword } = req.body;
+    if (!currentPassword)
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password required" });
+
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) return next(new AppError("User not found", 404));
+
+    const ok = await user.comparePassword(currentPassword);
+    if (!ok)
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password is incorrect" });
+
+    await User.findByIdAndDelete(req.user._id);
+
+    res.status(200).json({ success: true, message: "Account deleted" });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -1,2 +1,12 @@
 # Authentication
-  Registation 
+  1. Registation ✅ 
+  2. Login ✅
+# Common Things 
+  1. Profile ✅
+# Teacher 
+  1. ✅   
+# Studnet 
+  1. ✅   
+  
+
+
