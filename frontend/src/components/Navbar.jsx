@@ -13,9 +13,9 @@ const Navbar = () => {
   const { user, logout, token } = useAuth() || {};
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [quizzesCache, setQuizzesCache] = useState([]);
-  const [subjectsMap, setSubjectsMap] = useState({});
+  const [subjectsCache, setSubjectsCache] = useState([]);
   const searchRef = useRef(null);
+  const searchContainerRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const userMenuRef = useRef(null);
 
@@ -23,42 +23,7 @@ const Navbar = () => {
   useEffect(() => {
     let mounted = true;
 
-    // fetch quizzes and subjects for teacher search when user is available
-    const fetchForSearch = async () => {
-      if (!user || user.role !== "teacher") return;
-      try {
-        const [qRes, sRes] = await Promise.allSettled([
-          api.get(
-            "/quizzes?all=true",
-            token
-              ? { headers: { Authorization: `Bearer ${token}` } }
-              : undefined,
-          ),
-          api.get(
-            "/subjects",
-            token
-              ? { headers: { Authorization: `Bearer ${token}` } }
-              : undefined,
-          ),
-        ]);
-        if (!mounted) return;
-        const quizzes =
-          qRes.status === "fulfilled"
-            ? qRes.value.data.quizzes || qRes.value.data || []
-            : [];
-        const subjects =
-          sRes.status === "fulfilled" ? sRes.value.data.subjects || [] : [];
-        const map = {};
-        subjects.forEach((s) => {
-          map[s._id] = s;
-        });
-        setQuizzesCache(quizzes);
-        setSubjectsMap(map);
-      } catch (e) {
-        // ignore
-      }
-    };
-    fetchForSearch();
+    // no upfront prefetch; searches will query courses (subjects) from the server
 
     function handleClickOutside(e) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
@@ -67,12 +32,19 @@ const Navbar = () => {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target)) {
         setIsOpen(false);
       }
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target)
+      ) {
+        setSearchResults([]);
+      }
     }
 
     function handleKey(e) {
       if (e.key === "Escape") {
         setUserMenuOpen(false);
         setIsOpen(false);
+        setSearchResults([]);
       }
     }
 
@@ -85,33 +57,22 @@ const Navbar = () => {
     };
   }, [user]);
 
-  // live filter when searchQuery changes
+  // Debounced server-backed search on typing for courses (subjects)
   useEffect(() => {
     if (!searchQuery) {
       setSearchResults([]);
       return;
     }
-    const q = searchQuery.trim().toLowerCase();
-    const matches = quizzesCache
-      .filter((z) => {
-        const title = (z.title || "").toLowerCase();
-        const subj = subjectsMap[z.subject]
-          ? subjectsMap[z.subject].code || ""
-          : "";
-        return title.includes(q) || subj.toLowerCase().includes(q);
-      })
-      .slice(0, 8)
-      .map((z) => ({
-        ...z,
-        subjectCode: subjectsMap[z.subject]
-          ? subjectsMap[z.subject].code
-          : undefined,
-        type: "quiz",
-      }));
-    setSearchResults(matches);
-  }, [searchQuery, quizzesCache, subjectsMap]);
 
-  // perform server-backed search (on Enter or button click)
+    const handler = setTimeout(() => {
+      performSearch();
+    }, 300);
+
+    return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, user]);
+
+  // perform server-backed search for courses (subjects) only
   const performSearch = async () => {
     const q = (searchQuery || "").trim();
     if (!q) {
@@ -120,44 +81,19 @@ const Navbar = () => {
       return;
     }
     try {
-      const quizUrl =
-        user && user.role === "teacher"
-          ? `/quizzes?search=${encodeURIComponent(q)}&all=true`
-          : `/quizzes?search=${encodeURIComponent(q)}`;
       const subjectUrl = `/subjects?search=${encodeURIComponent(q)}`;
-      const [sRes, qRes] = await Promise.allSettled([
-        api.get(
-          subjectUrl,
-          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-        ),
-        api.get(
-          quizUrl,
-          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-        ),
-      ]);
-
-      const subjects =
-        sRes.status === "fulfilled" ? sRes.value.data.subjects || [] : [];
-      const quizzes =
-        qRes.status === "fulfilled" ? qRes.value.data.quizzes || [] : [];
-
-      const mappedSubjects = subjects.map((s) => ({
+      const res = await api.get(
+        subjectUrl,
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+      );
+      const subjects = res?.data?.subjects || [];
+      const mapped = subjects.slice(0, 8).map((s) => ({
         _id: s._id,
         title: s.name,
         subjectCode: s.code,
         type: "subject",
       }));
-      const mappedQuizzes = quizzes.map((z) => ({
-        ...z,
-        title: z.title || "",
-        subjectCode: subjectsMap[z.subject]
-          ? subjectsMap[z.subject].code
-          : undefined,
-        type: "quiz",
-      }));
-
-      const merged = [...mappedSubjects, ...mappedQuizzes].slice(0, 8);
-      setSearchResults(merged);
+      setSearchResults(mapped);
     } catch (err) {
       setSearchResults([]);
     }
@@ -205,7 +141,7 @@ const Navbar = () => {
             </button>
             {user && (
               <div className="hidden lg:block">
-                <div className="relative">
+                <div className="relative" ref={searchContainerRef}>
                   <input
                     ref={searchRef}
                     type="search"
@@ -250,10 +186,20 @@ const Navbar = () => {
                             onClick={() => {
                               setSearchQuery("");
                               setSearchResults([]);
+                              // Navigate to different routes depending on user role
+                              const isTeacher = user && user.role === "teacher";
                               if (r.type === "subject") {
-                                navigate(`/teacher/courses/${r._id}`);
+                                navigate(
+                                  isTeacher
+                                    ? `/teacher/courses/${r._id}`
+                                    : `/courses/${r._id}`,
+                                );
                               } else {
-                                navigate(`/teacher/quiz/${r._id}`);
+                                navigate(
+                                  isTeacher
+                                    ? `/teacher/quiz/${r._id}`
+                                    : `/quiz/${r._id}`,
+                                );
                               }
                             }}
                             className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
