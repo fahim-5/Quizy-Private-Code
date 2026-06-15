@@ -14,6 +14,7 @@ function QuestionForm({ onSubmit, initial = null }) {
   );
   const [answerText, setAnswerText] = useState(initial?.answerText || "");
   const [points, setPoints] = useState(initial?.points ?? 1);
+  const [extraTime, setExtraTime] = useState(initial?.extraTime ?? 0);
   const [validationError, setValidationError] = useState(null);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ function QuestionForm({ onSubmit, initial = null }) {
       );
       setAnswerText(initial.answerText || "");
       setPoints(initial.points ?? 1);
+      setExtraTime(initial.extraTime ?? 0);
       setValidationError(null);
     }
   }, [initial]);
@@ -73,6 +75,10 @@ function QuestionForm({ onSubmit, initial = null }) {
       setValidationError("Points must be between 1 and 100.");
       return;
     }
+    if (Number(extraTime) < 0) {
+      setValidationError("Extra time must be 0 or a positive number.");
+      return;
+    }
 
     setValidationError(null);
     const payload = {
@@ -80,6 +86,7 @@ function QuestionForm({ onSubmit, initial = null }) {
       type,
       points: Number(points),
     };
+    if (extraTime) payload.extraTime = Number(extraTime);
     if (type === "mcq") {
       payload.options = options;
       payload.correctIndex = Number(correctIndex);
@@ -101,6 +108,7 @@ function QuestionForm({ onSubmit, initial = null }) {
     setCorrectIndex(null);
     setAnswerText("");
     setPoints(1);
+    setExtraTime(0);
   };
 
   return (
@@ -222,6 +230,18 @@ function QuestionForm({ onSubmit, initial = null }) {
             className="w-full border border-gray-300 rounded-md px-2 py-1 text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-black">
+            Extra time (seconds)
+          </label>
+          <input
+            type="number"
+            value={extraTime}
+            min={0}
+            onChange={(e) => setExtraTime(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-2 py-1 text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+          />
+        </div>
       </div>
       <div>
         <div>
@@ -280,8 +300,8 @@ export default function ManageQuestions() {
       setLoading(true);
       const body = { ...payload, quiz: quizId };
       const res = await api.post(`/questions`, body);
-      // POST returns created question with correctIndex; append to list
-      setQuestions((s) => [res.data.question, ...s]);
+      // Refresh quiz and questions so quiz.timeLimit reflects extraTime changes
+      await fetchData();
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Create failed");
     } finally {
@@ -308,7 +328,8 @@ export default function ManageQuestions() {
     try {
       setLoading(true);
       await api.delete(`/questions/${qid}`);
-      setQuestions((s) => s.filter((q) => (q._id || q.id) !== qid));
+      // Refresh quiz and questions so quiz.timeLimit reflects removed extraTime
+      await fetchData();
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Delete failed");
     } finally {
@@ -348,13 +369,11 @@ export default function ManageQuestions() {
         <h3 className="text-lg font-semibold text-black">Quiz</h3>
         <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm mt-2">
           <div className="font-medium text-black">
-            {quiz?.title || `Quiz ${quizId}`}
+            Title: {quiz?.title || `Quiz ${quizId}`}
           </div>
-          <div className="text-sm text-gray-700">
-            Duration: {quiz?.timeLimit || "—"}s
-          </div>
-          <div className="text-sm text-gray-700">
-            Rules: {quiz?.rules || "—"}
+          <div className="text-sm text-gray-700 mt-1">
+            Duration:{" "}
+            {typeof quiz?.timeLimit !== "undefined" ? quiz.timeLimit : 0}s
           </div>
         </div>
       </div>
@@ -410,6 +429,11 @@ export default function ManageQuestions() {
                       <div className="text-sm text-gray-700">
                         Points: {q.points ?? 1}
                       </div>
+                      {q.extraTime ? (
+                        <div className="text-sm text-gray-700">
+                          Extra time: {q.extraTime}s
+                        </div>
+                      ) : null}
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditing(q)}

@@ -51,6 +51,12 @@ export default function TeacherQuizzes() {
     navigate(`/quiz/${q._id || q.id}`);
   };
   const handleManage = (q) => {
+    // Open the Quiz Editor (Basic info) so teacher can edit time/description first,
+    // then proceed to questions. New route: /teacher/quiz/:id/edit
+    navigate(`/teacher/quiz/${q._id || q.id}/edit`);
+  };
+  const handleQuestions = (q) => {
+    // Open the Questions manager for this quiz
     navigate(`/teacher/quiz/${q._id || q.id}`);
   };
   const handleDelete = async (q) => {
@@ -178,9 +184,8 @@ export default function TeacherQuizzes() {
           quizzes={filteredQuizzes}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onManage={handleManage}
+          onQuestions={handleQuestions}
           onCopy={handleCopy}
-          onMonitor={handleMonitor}
           onReport={handleReport}
         />
       </div>

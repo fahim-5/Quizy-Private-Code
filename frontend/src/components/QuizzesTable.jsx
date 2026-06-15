@@ -4,7 +4,8 @@ export default function QuizzesTable({
   quizzes = [],
   onEdit = () => {},
   onDelete = () => {},
-  onManage = () => {},
+  onManage,
+  onQuestions = () => {},
   onCopy = () => {},
   onMonitor = () => {},
   onReport = () => {},
@@ -38,19 +39,29 @@ export default function QuizzesTable({
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
+                {typeof onManage === "function" ? (
+                  <button
+                    className="px-2 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                    onClick={() => onManage(q)}
+                  >
+                    Manage
+                  </button>
+                ) : null}
                 <button
                   className="px-2 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200"
-                  onClick={() => onManage(q)}
+                  onClick={() => onQuestions(q)}
                 >
-                  Manage
+                  Questions
                 </button>
                 {/* Edit and Copy removed per UX request */}
-                <button
-                  className="px-2 py-1 bg-white border border-indigo-100 text-sm rounded hover:bg-indigo-50"
-                  onClick={() => onMonitor(q)}
-                >
-                  Monitor
-                </button>
+                {typeof onMonitor === "function" ? (
+                  <button
+                    className="px-2 py-1 bg-white border border-indigo-100 text-sm rounded hover:bg-indigo-50"
+                    onClick={() => onMonitor(q)}
+                  >
+                    Monitor
+                  </button>
+                ) : null}
                 <button
                   className="px-2 py-1 bg-white border border-gray-200 text-sm rounded hover:bg-gray-50"
                   onClick={() => onReport(q)}

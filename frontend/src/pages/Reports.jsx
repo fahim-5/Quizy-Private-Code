@@ -46,25 +46,6 @@ export default function Reports() {
     }
   };
 
-  const downloadPDF = async () => {
-    try {
-      const res = await api.get(`/results/teacher/quiz/${quizId}/export/pdf`, {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(
-        new Blob([res.data], { type: "application/pdf" }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `report_${quizId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-    } catch (err) {
-      alert("PDF export failed");
-    }
-  };
-
   const openStudentReport = async (student) => {
     const sid =
       student && student._id ? student._id : student.identifier || student.name;
@@ -97,12 +78,6 @@ export default function Reports() {
             className="px-3 py-1 bg-green-600 text-white rounded"
           >
             Export CSV
-          </button>
-          <button
-            onClick={downloadPDF}
-            className="px-3 py-1 bg-gray-800 text-white rounded"
-          >
-            Export PDF
           </button>
         </div>
       </div>
