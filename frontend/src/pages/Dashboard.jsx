@@ -238,7 +238,7 @@ export default function Dashboard() {
                       Create Quiz
                     </button>
                     <button
-                      onClick={() => navigate("/teacher")}
+                      onClick={() => navigate("/teacher/quizzes")}
                       className="text-sm text-gray-600"
                     >
                       View all

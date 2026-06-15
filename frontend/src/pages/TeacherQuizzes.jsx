@@ -11,7 +11,7 @@ export default function TeacherQuizzes() {
   const [error, setError] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  // live search query
 
   useEffect(() => {
     if (!user) return;
@@ -86,9 +86,6 @@ export default function TeacherQuizzes() {
   const handleReport = (q) => navigate(`/teacher/reports/${q._id || q.id}`);
 
   const filteredQuizzes = quizzes.filter((q) => {
-    if (filter === "draft") return q.status === "draft" || q.draft;
-    if (filter === "published")
-      return q.status === "published" || q.visibleFrom;
     if (query && query.trim()) {
       const t = (q.title || q.name || "").toLowerCase();
       return t.includes(query.trim().toLowerCase());
@@ -103,28 +100,42 @@ export default function TeacherQuizzes() {
     <div className="bg-white min-h-screen p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-black">My Quizzes</h2>
-          <div className="text-sm text-gray-600">
-            Showing your quizzes (newest first)
-          </div>
+          <h2 className="text-2xl font-bold text-black">Your Quizzes</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage and review your quizzes
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
-            <input
-              placeholder="Search quizzes..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="bg-transparent outline-none text-sm px-2 w-48"
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="text-sm bg-transparent outline-none"
-            >
-              <option value="all">All</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-            </select>
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
+              <input
+                placeholder="Search quizzes by name..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="bg-transparent outline-none text-sm px-2 w-56"
+              />
+            </div>
+            {/* Live suggestions */}
+            {query && query.trim() !== "" && (
+              <div className="absolute mt-1 w-56 bg-white border rounded shadow z-20">
+                {(quizzes || [])
+                  .filter((q) =>
+                    (q.title || q.name || "")
+                      .toLowerCase()
+                      .includes(query.trim().toLowerCase()),
+                  )
+                  .slice(0, 6)
+                  .map((q) => (
+                    <div
+                      key={q._id}
+                      onClick={() => navigate(`/teacher/quiz/${q._id || q.id}`)}
+                      className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                    >
+                      {q.title || q.name}
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
           <button
             onClick={fetchQuizzes}
