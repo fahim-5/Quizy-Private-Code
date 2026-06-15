@@ -80,6 +80,30 @@ export default function Settings() {
     }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await api.delete(`/users/me`, {
+        data: { currentPassword: deletePassword },
+      });
+      // successful deletion: logout and redirect to home/login
+      logout && logout();
+      navigate("/login");
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || "Delete failed");
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setDeletePassword("");
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -147,12 +171,56 @@ export default function Settings() {
               {loading ? "Saving..." : "Save Update"}
             </button>
             <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="bg-red-600 text-white px-4 py-2 rounded ml-2 hover:bg-red-700"
+            >
+              Delete Account
+            </button>
+            <button
               onClick={() => navigate(-1)}
               className="border px-4 py-2 rounded"
             >
               Cancel
             </button>
           </div>
+
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg max-w-sm w-full">
+                <h3 className="text-lg font-semibold mb-2">Delete account</h3>
+                <p className="text-sm mb-3">
+                  Enter your current password to confirm account deletion. This
+                  action cannot be undone.
+                </p>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Current password"
+                  className="w-full border px-2 py-1 rounded mb-3"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeletePassword("");
+                    }}
+                    className="px-3 py-1 border rounded"
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteAccount}
+                    className="px-3 py-1 bg-red-600 text-white rounded"
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

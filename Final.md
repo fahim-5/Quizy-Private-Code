@@ -3,4 +3,10 @@
   2. Login ✅
 # Common Things 
   1. Profile ✅
-  2.✅   
+# Teacher 
+  1. ✅   
+# Studnet 
+  1. ✅   
+  
+
+
