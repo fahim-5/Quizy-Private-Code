@@ -455,7 +455,7 @@ export default function Dashboard() {
                                     });
                                   }
                                 }}
-                                className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                                className="px-3 py-1 bg-black text-white rounded text-sm"
                               >
                                 View
                               </button>

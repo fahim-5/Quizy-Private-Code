@@ -116,6 +116,7 @@ const Navbar = () => {
     if (user.role === "student") {
       navigation.push({ name: "My Courses", href: "/courses?enrolled=true" });
       navigation.push({ name: "All Courses", href: "/courses" });
+      navigation.push({ name: "Results", href: "/results" });
     }
   }
 

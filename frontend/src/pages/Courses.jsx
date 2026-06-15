@@ -160,31 +160,7 @@ export default function Courses() {
                       <span>
                         {s.createdBy?.name || s.createdBy?.identifier || "—"}
                       </span>
-                      {s.createdBy?.email && !isOwner && (
-                        <button
-                          onClick={() => {
-                            const email = s.createdBy?.email;
-                            if (email) window.location.href = `mailto:${email}`;
-                          }}
-                          title="Message instructor"
-                          className="p-1 bg-black text-white rounded-md flex items-center justify-center"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 15a2 2 0 01-2 2H8l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                            />
-                          </svg>
-                        </button>
-                      )}
+                    
                     </div>
                   </td>
                   {user && user.role === "teacher" && (
@@ -238,9 +214,12 @@ export default function Courses() {
                         }
                       }}
                       className={`${
-                        isOwner || s.isEnrolled
-                          ? "text-sm px-2 py-1 bg-green-600 text-white rounded-md"
-                          : "text-sm px-2 py-1 border rounded-md"
+                        // If visiting the enrolled-only view as a student, show black view button
+                        showEnrolledOnly && user && user.role === "student"
+                          ? "text-sm px-2 py-1 bg-black text-white rounded-md"
+                          : isOwner || s.isEnrolled
+                            ? "text-sm px-2 py-1 bg-green-600 text-white rounded-md"
+                            : "text-sm px-2 py-1 border rounded-md"
                       }`}
                     >
                       View Course
