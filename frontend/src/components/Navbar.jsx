@@ -203,82 +203,84 @@ const Navbar = () => {
             >
               <img src={logo} alt="Qizy logo" className="h-12 mr-2 w-auto" />
             </button>
-            <div className="hidden lg:block">
-              <div className="relative">
-                <input
-                  ref={searchRef}
-                  type="search"
-                  placeholder="Course or quiz name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      performSearch();
-                    }
-                  }}
-                  className="border rounded-md px-3 py-1 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-black text-black bg-white"
-                  aria-label="Search courses and quizzes"
-                />
-                <button
-                  onClick={() => performSearch()}
-                  className="absolute right-0 top-0 mt-1 mr-1 p-1 text-gray-600 hover:text-black"
-                  aria-label="Search"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            {user && (
+              <div className="hidden lg:block">
+                <div className="relative">
+                  <input
+                    ref={searchRef}
+                    type="search"
+                    placeholder="Course or quiz name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        performSearch();
+                      }
+                    }}
+                    className="border rounded-md px-3 py-1 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-black text-black bg-white"
+                    aria-label="Search courses and quizzes"
+                  />
+                  <button
+                    onClick={() => performSearch()}
+                    className="absolute right-0 top-0 mt-1 mr-1 p-1 text-gray-600 hover:text-black"
+                    aria-label="Search"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
-                    />
-                  </svg>
-                </button>
-                {searchQuery && (
-                  <div className="absolute left-0 mt-1 w-64 bg-white border rounded-md shadow-lg z-50 max-h-64 overflow-auto">
-                    {searchResults.length > 0 ? (
-                      searchResults.map((r) => (
-                        <button
-                          key={r._id}
-                          onClick={() => {
-                            setSearchQuery("");
-                            setSearchResults([]);
-                            if (r.type === "subject") {
-                              navigate(`/teacher/courses/${r._id}`);
-                            } else {
-                              navigate(`/teacher/quiz/${r._id}`);
-                            }
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
-                        >
-                          <div className="font-medium text-black">
-                            {r.title}{" "}
-                            {r.type === "subject" && (
-                              <span className="text-xs text-gray-400">
-                                (Course)
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {r.subjectCode || "—"}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        No results
-                      </div>
-                    )}
-                  </div>
-                )}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
+                      />
+                    </svg>
+                  </button>
+                  {searchQuery && (
+                    <div className="absolute left-0 mt-1 w-64 bg-white border rounded-md shadow-lg z-50 max-h-64 overflow-auto">
+                      {searchResults.length > 0 ? (
+                        searchResults.map((r) => (
+                          <button
+                            key={r._id}
+                            onClick={() => {
+                              setSearchQuery("");
+                              setSearchResults([]);
+                              if (r.type === "subject") {
+                                navigate(`/teacher/courses/${r._id}`);
+                              } else {
+                                navigate(`/teacher/quiz/${r._id}`);
+                              }
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                          >
+                            <div className="font-medium text-black">
+                              {r.title}{" "}
+                              {r.type === "subject" && (
+                                <span className="text-xs text-gray-400">
+                                  (Course)
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {r.subjectCode || "—"}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-500">
+                          No results
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
