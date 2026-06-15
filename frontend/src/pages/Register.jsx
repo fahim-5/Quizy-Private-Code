@@ -85,6 +85,10 @@ export default function Register() {
       // server accepted registration, mark as registered (awaiting code)
       setRegistered(true);
       setError(null);
+      const preview = res?.data?.data?.preview;
+      if (preview) {
+        setVerifyModal((v) => ({ ...v, preview }));
+      }
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Registration failed";
@@ -101,8 +105,11 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="max-w-md w-full p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="flex flex-col items-center mb-4">
-          <img src={logo} alt="Quizly" className="h-16" />
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-black">
+            Register Account to
+          </h2>
+          <img src={logo} alt="Quizly" className="h-12" />
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
@@ -399,13 +406,15 @@ export default function Register() {
                       error: null,
                     }));
                     try {
-                      await api.post("/auth/resend-verification", {
+                      const r = await api.post("/auth/resend-verification", {
                         email: verifyModal.email,
                       });
+                      const preview = r?.data?.data?.preview;
                       setVerifyModal((v) => ({
                         ...v,
                         loading: false,
                         resent: true,
+                        preview: preview || v.preview,
                       }));
                     } catch (err) {
                       setVerifyModal((v) => ({
@@ -423,6 +432,18 @@ export default function Register() {
                   Resend
                 </button>
               </div>
+              {verifyModal.preview && (
+                <div className="mt-2 text-sm">
+                  <a
+                    href={verifyModal.preview}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    Open email preview
+                  </a>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => {
