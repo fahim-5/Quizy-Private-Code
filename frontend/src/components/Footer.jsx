@@ -19,7 +19,7 @@ const Footer = () => {
             </p>
             <div className="flex space-x-4 pt-2">
               <a
-                href="https://github.com"
+                href="https://github.com/fahim-5/Quizy-Private-Code"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-600 hover:text-black transition-colors"
@@ -179,7 +179,7 @@ const Footer = () => {
               &copy; {new Date().getFullYear()} Quizly. All rights reserved.
             </p>
             <p className="text-sm text-gray-600">
-              Built with ❤️ by {" "}
+              Built with ❤️ by{" "}
               <a
                 href="https://iamfaysal.netlify.app/"
                 className="text-gray-400 hover:text-black-italic transition-colors font-bold italic"
@@ -196,4 +196,3 @@ const Footer = () => {
 };
 
 export default Footer;
-
